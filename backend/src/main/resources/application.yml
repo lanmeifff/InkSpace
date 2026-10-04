@@ -1,0 +1,67 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: inkspace-backend
+  # 本地开发使用 local profile，凭据放 application-local.yml
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  autoconfigure:
+    # 我们自定义了 Security filter chain，不需要 Boot 生成的默认用户
+    exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+  datasource:
+    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/inkspace?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true}
+    username: ${MYSQL_USERNAME:root}
+    password: ${MYSQL_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 3s
+  jackson:
+    time-zone: GMT+8
+  servlet:
+    multipart:
+      # 与 app.upload-max-bytes 保持一致
+      max-file-size: 5MB
+      max-request-size: 6MB
+
+jwt:
+  # 密钥（HS256 要求 >= 32 字节）：真实值放 application-local.yml
+  secret: ${JWT_SECRET:}
+  access-ttl-minutes: 30
+  refresh-ttl-days: 14
+
+app:
+  # 分享链接前缀（前端路由），本地开发默认指向 Next.js
+  share-base-url: ${SHARE_BASE_URL:http://localhost:3000/share/}
+  # 本地上传目录
+  upload-dir: ${UPLOAD_DIR:./uploads}
+  # 图片/头像大小上限
+  upload-max-bytes: 5242880
+  ai:
+    # OpenAI 兼容协议；DeepSeek/通义/OpenAI 改 url+model 即可
+    url: ${AI_URL:https://api.deepseek.com/v1/chat/completions}
+    api-key: ${AI_API_KEY:}
+    model: ${AI_MODEL:deepseek-chat}
+    timeout-seconds: ${AI_TIMEOUT_SECONDS:60}
+    daily-quota: ${AI_DAILY_QUOTA:50}
+    price-per-1k-tokens: ${AI_PRICE_PER_1K:0.002}
+    # true = 调用本地 mock，无需 API Key
+    mock: ${AI_MOCK:false}
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    # 打印 SQL
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    banner: false
+    db-config:
+      id-type: auto
+
+logging:
+  level:
+    com.inkspace: debug

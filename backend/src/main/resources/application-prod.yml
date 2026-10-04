@@ -1,0 +1,17 @@
+# 生产/容器环境：SQL 日志关闭、日志级别收敛；连接信息全部走环境变量
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+
+logging:
+  level:
+    root: info
+    com.inkspace: info
+
+app:
+  ai:
+    mock: ${AI_MOCK:false}
+    api-key: ${AI_API_KEY:}
+    model: ${AI_MODEL:deepseek-chat}
+  # 浏览器跨域白名单（逗号分隔）。改为真实域名时同步更新，否则浏览器请求会被拒（403）
+  allowed-origins: ${ALLOWED_ORIGINS:http://localhost,http://localhost:8088,http://localhost:3000}

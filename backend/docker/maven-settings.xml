@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 容器内构建用：走阿里云 Maven 仓库，国内网络更稳 -->
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0">
+    <mirrors>
+        <mirror>
+            <id>aliyun-central</id>
+            <name>Aliyun Central</name>
+            <url>https://maven.aliyun.com/repository/central</url>
+            <mirrorOf>central</mirrorOf>
+        </mirror>
+    </mirrors>
+</settings>

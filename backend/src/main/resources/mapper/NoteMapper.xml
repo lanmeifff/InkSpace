@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.inkspace.mapper.NoteMapper">
+
+    <!--
+      全文检索：走 note 表的 ngram FULLTEXT 索引（中文按 2-gram 切分）。
+      - NATURAL LANGUAGE MODE：按词频/文档频率算相关性，score 越大越相关
+      - 与列表接口共用同一套筛选条件（笔记本/状态/收藏/标签），避免"搜索时筛选失效"
+    -->
+    <select id="search" resultType="com.inkspace.domain.entity.Note">
+        SELECT id,
+               user_id,
+               notebook_id,
+               title,
+               content_plain,
+               kind,
+               status,
+               is_favorite,
+               source_url,
+               version,
+               created_at,
+               updated_at,
+               MATCH(title, content_plain) AGAINST (#{keyword} IN NATURAL LANGUAGE MODE) AS score
+        FROM note
+        WHERE user_id = #{userId}
+          AND deleted_at IS NULL
+          AND MATCH(title, content_plain) AGAINST (#{keyword} IN NATURAL LANGUAGE MODE)
+        <if test="notebookId != null">
+            AND notebook_id = #{notebookId}
+        </if>
+        <if test="status != null and status != ''">
+            AND status = #{status}
+        </if>
+        <if test="favorite != null">
+            AND is_favorite = #{favorite}
+        </if>
+        <if test="noteIds != null">
+            AND id IN
+            <foreach collection="noteIds" item="nid" open="(" separator="," close=")">
+                #{nid}
+            </foreach>
+        </if>
+        ORDER BY score DESC, updated_at DESC
+    </select>
+</mapper>

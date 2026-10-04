@@ -1,0 +1,37 @@
+# ── Java / Maven ──
+target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+*.war
+
+# ── IDE ──
+.idea/
+*.iml
+.vscode/
+*.swp
+
+# ── Node / Next.js（frontend/ 下前端产物）──
+node_modules/
+.next/
+out/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+
+# ── 运行与日志 ──
+logs/
+*.log
+
+# ── 环境变量与密钥（绝不入库）──
+.env
+.env.*
+!.env.example
+!.env.local.example
+*.pem
+# 本地真实配置（保留 .example 模板）
+backend/src/main/resources/application-local.yml
+
+# ── 本地数据/上传（部署时用卷挂载）──
+uploads/
+data/

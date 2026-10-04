@@ -1,0 +1,7 @@
+target/
+uploads/
+.git/
+.idea/
+*.iml
+*.log
+src/main/resources/application-local.yml

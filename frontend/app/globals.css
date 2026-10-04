@@ -1,0 +1,138 @@
+@import "tailwindcss";
+
+/*
+  墨记 InkSpace 设计令牌
+  风格：暖纸底 + 陶土橙点缀，Twitter 式大留白与细边框；刻意避开蓝紫"AI 感"配色。
+*/
+@theme {
+  --color-paper: #faf8f5;      /* 页面底色：暖白纸 */
+  --color-surface: #ffffff;    /* 卡片/输入框 */
+  --color-line: #e9e4dc;       /* 分隔线 */
+  --color-line-strong: #d8d0c4;
+  --color-ink: #1c1917;        /* 主文字：近黑暖调 */
+  --color-ink-soft: #44403c;
+  --color-muted: #78716c;      /* 次要文字 */
+  --color-brand: #c2410c;      /* 主色：陶土橙 */
+  --color-brand-dark: #9a3412;
+  --color-brand-soft: #fdf0e7; /* 主色浅底 */
+  --color-olive: #4d7c0f;      /* 次强调：橄榄绿（标签/成功） */
+  --color-olive-soft: #f2f7e8;
+  --color-danger: #b91c1c;
+
+  --radius-card: 14px;
+  --font-sans: ui-sans-serif, -apple-system, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: #f7d9c4;
+}
+
+/* 细滚动条，避免默认样式破坏简洁感 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 文章正文排版（Markdown 预览与分享页共用） */
+.prose-ink {
+  line-height: 1.85;
+  font-size: 15px;
+  color: var(--color-ink-soft);
+}
+.prose-ink h1,
+.prose-ink h2,
+.prose-ink h3 {
+  color: var(--color-ink);
+  font-weight: 600;
+  line-height: 1.35;
+  margin: 1.4em 0 0.6em;
+}
+.prose-ink h1 { font-size: 1.6em; }
+.prose-ink h2 { font-size: 1.3em; }
+.prose-ink h3 { font-size: 1.1em; }
+.prose-ink p { margin: 0.75em 0; }
+.prose-ink ul,
+.prose-ink ol { margin: 0.75em 0; padding-left: 1.4em; }
+.prose-ink ul { list-style: disc; }
+.prose-ink ol { list-style: decimal; }
+.prose-ink li { margin: 0.25em 0; }
+.prose-ink a {
+  color: var(--color-brand);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.prose-ink blockquote {
+  border-left: 3px solid var(--color-line-strong);
+  padding-left: 12px;
+  color: var(--color-muted);
+  margin: 1em 0;
+}
+.prose-ink code {
+  background: #f4f1ec;
+  padding: 1px 5px;
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+.prose-ink pre {
+  background: #2a2622;
+  color: #f5f1ea;
+  padding: 14px 16px;
+  border-radius: 10px;
+  overflow-x: auto;
+  margin: 1em 0;
+}
+.prose-ink pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+}
+.prose-ink table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+  font-size: 0.94em;
+}
+.prose-ink th,
+.prose-ink td {
+  border: 1px solid var(--color-line);
+  padding: 6px 10px;
+  text-align: left;
+}
+.prose-ink th {
+  background: #f7f4ef;
+}
+
+/* 搜索命中的高亮（后端已做 HTML 转义） */
+.hl em {
+  font-style: normal;
+  background: #fbe3cf;
+  color: var(--color-brand-dark);
+  padding: 0 2px;
+  border-radius: 3px;
+}

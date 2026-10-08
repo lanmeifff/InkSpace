@@ -141,8 +141,9 @@ export default function SettingsPage() {
     }
   };
 
-  const sourceHint =
-    aiConfig?.source === 'user'
+  const sourceHint = aiConfig?.mock
+    ? '当前是演示模式（服务端开了 mock 且没有可用 Key）：摘要与回答都是固定假数据，填好下面的配置就会走真实模型'
+    : aiConfig?.source === 'user'
       ? `当前使用你自己的 Key · 模型 ${aiConfig.effectiveModel}`
       : aiConfig?.source === 'global'
         ? `当前使用服务端配置的 Key · 模型 ${aiConfig.effectiveModel}`
@@ -164,13 +165,29 @@ export default function SettingsPage() {
             </p>
           </div>
           {aiConfig?.hasApiKey && (
-            <span className="shrink-0 rounded-full bg-olive-soft px-2.5 py-0.5 text-[11px] text-olive">
+            <span className="shrink-0 border border-ink px-2.5 py-0.5 text-[11px] font-semibold tracking-[0.08em] text-ink uppercase">
               已配置
+            </span>
+          )}
+          {aiConfig?.mock && !aiConfig.hasApiKey && (
+            <span className="shrink-0 border border-line-strong px-2.5 py-0.5 text-[11px] font-semibold tracking-[0.08em] text-muted uppercase">
+              演示模式
             </span>
           )}
         </div>
 
-        <p className="mt-3 rounded-[2px] bg-paper px-3 py-2 text-[12px] text-muted">{sourceHint}</p>
+        {/* mock 模式下必须显眼提示：否则用户会以为"AI 就这水平"，而不是"我没配 Key" */}
+        {aiConfig?.mock && (
+          <p className="mt-3 border-l-2 border-ink bg-wash px-3 py-2 text-[12px] leading-relaxed text-ink-soft">
+            <span className="font-semibold text-ink">当前返回的是固定假数据。</span>
+            服务端打开了 mock 且没有可用 Key，所以摘要、问答、周报都是预置文案，与你的文章内容无关。
+            填入下面的 API Key 并保存，即可切换到你自己的真实模型。
+          </p>
+        )}
+
+        {!aiConfig?.mock && (
+          <p className="mt-3 bg-wash px-3 py-2 text-[12px] text-muted">{sourceHint}</p>
+        )}
 
         <div className="mt-4 space-y-3">
           <label className="block">

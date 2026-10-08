@@ -86,7 +86,8 @@ class UpstreamErrorMessageTest {
         properties.setUrl(url);
         properties.setApiKey("sk-test");
         properties.setModel("gpt7.0 astra");
-        return new OpenAiCompatibleLlmClient(new FixedConfigService(properties, url), mapper, properties);
+        return new OpenAiCompatibleLlmClient(
+                new FixedConfigService(properties, url), new MockLlmClient(), mapper, properties);
     }
 
     /** 固定返回测试用的接入参数，不查库也不查缓存 */
@@ -95,7 +96,7 @@ class UpstreamErrorMessageTest {
 
         FixedConfigService(AiProperties properties, String url) {
             super(null, null, properties, null);
-            this.config = new AiClientConfig("测试", url, properties.getApiKey(), properties.getModel());
+            this.config = new AiClientConfig("测试", url, properties.getApiKey(), properties.getModel(), false);
         }
 
         @Override

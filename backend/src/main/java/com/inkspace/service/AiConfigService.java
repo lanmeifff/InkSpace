@@ -63,19 +63,28 @@ public class AiConfigService {
                 own == null ? "" : own.getModel(),
                 userKey ? "user" : (effective.hasKey() ? "global" : "none"),
                 effective.providerName(),
-                effective.model());
+                effective.model(),
+                effective.mock());
     }
 
-    /** 用户配了就用用户的，否则回落到服务端 app.ai.* 默认 */
+    /**
+     * 用户配了就用用户的，否则回落到服务端 app.ai.* 默认。
+     *
+     * mock 只在"服务端开了 mock 且用户没配 Key"时才生效：
+     * 用户自己填了 Key 却仍返回假数据，界面上又没有任何提示，
+     * 是最难排查的一类问题（实际踩过），所以这里让用户配置优先。
+     */
     private AiClientConfig toClientConfig(UserAiConfig own) {
         if (own != null) {
             AiClientConfig config = new AiClientConfig(
-                    own.getProviderName(), own.getUrl(), decrypt(own.getApiKeyCipher()), own.getModel());
+                    own.getProviderName(), own.getUrl(), decrypt(own.getApiKeyCipher()), own.getModel(), false);
             if (config.hasKey()) {
                 return config;
             }
         }
-        return new AiClientConfig("服务端默认", properties.getUrl(), properties.getApiKey(), properties.getModel());
+        boolean serverMock = properties.isMock() && !StringUtils.hasText(properties.getApiKey());
+        return new AiClientConfig("服务端默认", properties.getUrl(), properties.getApiKey(),
+                properties.getModel(), serverMock);
     }
 
     public AiConfigVO save(Long userId, AiConfigRequest request) {
@@ -116,7 +125,8 @@ public class AiConfigService {
         return config;
     }
 
-    private UserAiConfig select(Long userId) {
+    /** 包级可见：测试里覆盖它来免去数据库 */
+    UserAiConfig select(Long userId) {
         return mapper.selectOne(new LambdaQueryWrapper<UserAiConfig>().eq(UserAiConfig::getUserId, userId));
     }
 
@@ -157,7 +167,8 @@ public class AiConfigService {
         }
     }
 
-    private void evict(Long userId) {
+    /** 包级可见：测试里覆盖它来免去 Redis */
+    void evict(Long userId) {
         try {
             redis.delete(CACHE_KEY + userId);
         } catch (Exception e) {

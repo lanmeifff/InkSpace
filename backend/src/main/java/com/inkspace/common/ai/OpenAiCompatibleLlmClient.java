@@ -10,7 +10,7 @@ import com.inkspace.config.AiProperties;
 import com.inkspace.service.AiConfigService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -24,15 +24,20 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 /**
- * OpenAI 兼容协议的 LLM 客户端（DeepSeek / 通义 / OpenAI 均可）。
- * 只用 JDK 自带 HttpClient，不引入额外 SDK —— 协议很简单：POST JSON + SSE 流。
+ * LLM 客户端：按"每次调用传入的 userId"解析接入参数。
  *
- * 每次调用按传入的 userId 解析接入参数：用户自己配了就用自己的 Key/模型，
- * 没配则回落到 app.ai.* 的服务端默认。配置解析显式传参，不依赖 ThreadLocal ——
- * SSE 问答跑在 aiExecutor 线程上，那里拿不到请求线程的 SecurityContext。
+ * 用户自己配了就用自己的 Key/模型；没配则回落到 app.ai.* 的服务端默认。
+ * 服务端开了 mock 且用户没配 Key 时，这一路请求转交 MockLlmClient，
+ * 返回假数据（界面上会提示处于 mock 模式）。
+ *
+ * 配置解析显式传参，不依赖 ThreadLocal —— SSE 问答跑在 aiExecutor 线程上，
+ * 那里拿不到请求线程的 SecurityContext。
+ *
+ * 标 &#64;Primary：LlmClient 现在有两个实现（本类与 MockLlmClient），
+ * 业务侧只该注入这一个；mock 由本类在内部按配置转发。
  */
 @Component
-@ConditionalOnProperty(prefix = "app.ai", name = "mock", havingValue = "false", matchIfMissing = true)
+@Primary
 public class OpenAiCompatibleLlmClient implements LlmClient {
 
     private static final Logger log = LoggerFactory.getLogger(OpenAiCompatibleLlmClient.class);
@@ -41,14 +46,17 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
     private static final int TIMEOUT_FALLBACK_SECONDS = 60;
 
     private final AiConfigService configService;
+    private final MockLlmClient mockClient;
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
     private final int timeoutSeconds;
 
     public OpenAiCompatibleLlmClient(AiConfigService configService,
+                                     MockLlmClient mockClient,
                                      ObjectMapper objectMapper,
                                      AiProperties properties) {
         this.configService = configService;
+        this.mockClient = mockClient;
         this.objectMapper = objectMapper;
         this.timeoutSeconds = properties.getTimeoutSeconds() > 0
                 ? properties.getTimeoutSeconds() : TIMEOUT_FALLBACK_SECONDS;
@@ -60,6 +68,10 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
     @Override
     public LlmResult chat(Long userId, List<LlmMessage> messages, boolean jsonMode) {
         AiClientConfig config = resolve(userId);
+        if (config.mock()) {
+            return mockClient.chat(userId, messages, jsonMode);
+        }
+        requireUsable(config);
         HttpResponse<String> response = send(config, buildBody(config, messages, jsonMode, false));
         if (response.statusCode() != 200) {
             throw upstreamFailure(config, response.statusCode(), response.body());
@@ -78,6 +90,11 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
     @Override
     public void chatStream(Long userId, List<LlmMessage> messages, Consumer<String> onDelta) {
         AiClientConfig config = resolve(userId);
+        if (config.mock()) {
+            mockClient.chatStream(userId, messages, onDelta);
+            return;
+        }
+        requireUsable(config);
         HttpRequest request = HttpRequest.newBuilder(URI.create(config.url()))
                 .timeout(Duration.ofSeconds(timeoutSeconds))
                 .header("Content-Type", "application/json")
@@ -105,7 +122,9 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
 
     @Override
     public String currentModel(Long userId) {
-        return configService.resolve(userId).model();
+        AiClientConfig config = configService.resolve(userId);
+        // mock 模式下把真实模型名标成 mock，避免 ai_task 审计里出现"看起来调了真模型"的记录
+        return config.mock() ? "mock" : config.model();
     }
 
     /**
@@ -119,14 +138,15 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
         return new BizException(ErrorCode.AI_UPSTREAM_ERROR, detail);
     }
 
-    private AiClientConfig resolve(Long userId) {        AiClientConfig config = configService.resolve(userId);
-        if (!config.hasKey()) {
+    /** 真调上游前才校验配置；mock 分支不需要 Key，所以校验不放在更早的位置 */
+    private void requireUsable(AiClientConfig config) {
+        if (!config.hasKey() || config.url() == null || config.url().isBlank()) {
             throw new BizException(ErrorCode.AI_NOT_CONFIGURED);
         }
-        if (config.url() == null || config.url().isBlank()) {
-            throw new BizException(ErrorCode.AI_NOT_CONFIGURED);
-        }
-        return config;
+    }
+
+    private AiClientConfig resolve(Long userId) {
+        return configService.resolve(userId);
     }
 
     private void parseSseLine(String line, Consumer<String> onDelta) {

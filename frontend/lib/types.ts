@@ -97,6 +97,8 @@ export type AiConfigVO = {
   source: 'user' | 'global' | 'none';
   effectiveProvider: string;
   effectiveModel: string;
+  /** true = 当前走假数据（服务端开了 mock 且没配 Key），界面必须提示用户 */
+  mock: boolean;
 };
 
 // 公开博客（免登录只读）

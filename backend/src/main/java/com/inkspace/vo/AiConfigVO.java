@@ -7,6 +7,7 @@ package com.inkspace.vo;
  * @param model     你自己填的模型名（空表示没配）
  * @param provider  当前生效的服务商名称
  * @param effectiveModel 当前生效的模型名（可能来自服务端默认）
+ * @param mock      true 表示当前走的是假数据（服务端开了 mock 且你没配 Key），界面要提示用户
  */
 public record AiConfigVO(
         String providerName,
@@ -16,5 +17,6 @@ public record AiConfigVO(
         String model,
         String source,
         String effectiveProvider,
-        String effectiveModel) {
+        String effectiveModel,
+        boolean mock) {
 }

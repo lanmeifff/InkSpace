@@ -36,10 +36,11 @@ class OpenAiCompatibleLlmClientTest {
         properties.setApiKey(STUB_KEY);
         properties.setModel("stub-global-model");
         StubConfigService configs = new StubConfigService(properties);
-        OpenAiCompatibleLlmClient client = new OpenAiCompatibleLlmClient(configs, new ObjectMapper(), properties);
+        OpenAiCompatibleLlmClient client =
+                new OpenAiCompatibleLlmClient(configs, new MockLlmClient(), new ObjectMapper(), properties);
 
         // 用户自带配置：模型与 Key 都该用用户自己的
-        configs.user = new AiClientConfig("用户自带", STUB_URL, STUB_KEY, "stub-user-model");
+        configs.user = new AiClientConfig("用户自带", STUB_URL, STUB_KEY, "stub-user-model", false);
         LlmResult result = client.chat(1L, List.of(LlmMessage.user("ping")), false);
         assertEquals("stub-ok:stub-user-model", result.content());
         assertEquals(7, result.promptTokens());
@@ -100,7 +101,7 @@ class OpenAiCompatibleLlmClientTest {
             if (user != null && user.hasKey()) {
                 return user;
             }
-            return new AiClientConfig("服务端默认", props.getUrl(), globalKey, props.getModel());
+            return new AiClientConfig("服务端默认", props.getUrl(), globalKey, props.getModel(), false);
         }
     }
 }

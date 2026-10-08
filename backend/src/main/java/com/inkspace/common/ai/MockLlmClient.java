@@ -1,16 +1,20 @@
 package com.inkspace.common.ai;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * mock 实现：不调用真实模型，按提示词特征返回固定假数据（app.ai.mock=true）。
+ * mock 实现：不调用真实模型，按提示词特征返回固定假数据。
+ *
+ * 是否启用不再由 Bean 条件决定，而是每次调用看生效配置里的 mock 标记
+ * （用户自己配了 Key 就不会走到这里），这样不会出现"填了 Key 还返回假数据"。
+ *
+ * 注意：本类和 OpenAiCompatibleLlmClient 都实现 LlmClient，
+ * 后者带 &#64;Primary，业务侧注入到的永远是它；mock 只由它内部按配置转发进来。
  */
 @Component
-@ConditionalOnProperty(prefix = "app.ai", havingValue = "true", name = "mock")
 public class MockLlmClient implements LlmClient {
 
     private static final String SUMMARY = "【mock 摘要】这段笔记主要讲了线程池的核心参数（核心线程数、最大线程数、"

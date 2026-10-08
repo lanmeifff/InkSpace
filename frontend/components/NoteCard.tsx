@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { Card, TagPill } from '@/components/ui';
+import { TagPill } from '@/components/ui';
 import { HighlightedText } from '@/components/MarkdownView';
 import { noteApi } from '@/lib/api';
 import { useToast } from '@/components/Toast';
@@ -39,11 +39,11 @@ export function NoteCard({
   const excerpt = current.excerpt ?? '';
 
   return (
-    <Card className="group p-4 transition-colors hover:border-brand/35">
-      <div className="flex items-start gap-3">
+    <article className="group border-b border-line">
+      <div className="flex items-start gap-4 py-6">
         <div className="min-w-0 flex-1">
           <Link href={`/notes/${current.id}`} className="block">
-            <h3 className="truncate text-[16px] font-medium text-ink group-hover:text-brand-dark">
+            <h3 className="text-[19px] font-bold leading-snug tracking-[-0.01em] text-ink transition-colors group-hover:text-muted">
               {current.title || '未命名笔记'}
             </h3>
           </Link>
@@ -51,27 +51,28 @@ export function NoteCard({
           {excerpt ? (
             <HighlightedText
               html={excerpt}
-              className="hl mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-muted"
+              className="hl mt-2 line-clamp-2 max-w-[70ch] text-[13.5px] leading-[1.7] text-ink-soft"
             />
           ) : (
-            <p className="mt-1.5 text-[13px] text-muted">（暂无内容）</p>
+            <p className="mt-2 text-[13.5px] text-muted">（暂无内容）</p>
           )}
 
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-muted">
+          <div className="mt-3.5 flex flex-wrap items-center gap-x-3.5 gap-y-2 text-[11px] text-muted">
             <span
               className={cn(
-                'rounded-full px-2 py-0.5',
-                current.status === 'inbox'
-                  ? 'bg-brand-soft text-brand-dark'
-                  : current.status === 'archive'
-                    ? 'bg-line text-ink-soft'
-                    : 'bg-olive-soft text-olive',
+                'font-semibold tracking-[0.1em] uppercase',
+                current.status === 'inbox' || current.status === 'archive' ? 'text-ink' : 'text-muted',
               )}
             >
               {NOTE_STATUS_LABEL[current.status] ?? current.status}
             </span>
-            {current.kind === 'clip' && <span className="rounded-full bg-line px-2 py-0.5">剪藏</span>}
-            <span>{current.updatedAt}</span>
+            {current.kind === 'clip' && (
+              <span className="font-semibold tracking-[0.1em] text-muted uppercase">剪藏</span>
+            )}
+            {current.isPublic && (
+              <span className="font-semibold tracking-[0.1em] text-ink uppercase">已公开</span>
+            )}
+            <span className="font-mono">{current.updatedAt}</span>
             {(current.tags ?? []).map((tag) => (
               <TagPill key={tag} name={tag} onClick={() => onTagClick?.(tag)} />
             ))}
@@ -84,8 +85,8 @@ export function NoteCard({
           disabled={busy}
           title={current.favorite ? '取消收藏' : '收藏'}
           className={cn(
-            'shrink-0 rounded-full p-2 transition-colors',
-            current.favorite ? 'text-brand' : 'text-line-strong hover:text-brand/70',
+            'shrink-0 p-2 transition-colors',
+            current.favorite ? 'text-ink' : 'text-line-strong hover:text-ink',
           )}
         >
           <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill={current.favorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.6">
@@ -93,6 +94,6 @@ export function NoteCard({
           </svg>
         </button>
       </div>
-    </Card>
+    </article>
   );
 }

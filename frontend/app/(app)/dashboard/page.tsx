@@ -74,32 +74,37 @@ export default function DashboardPage() {
           </div>
           <div className="ml-auto flex items-center gap-1.5 text-[11px] text-muted">
             少
-            {[0.25, 0.45, 0.7, 1].map((ratio) => (
+            {[0.2, 0.45, 0.7, 1].map((ratio) => (
               <span
                 key={ratio}
-                className="h-3 w-3 rounded-[3px]"
-                style={{ background: `rgba(194, 65, 12, ${ratio})` }}
+                className="h-3 w-3"
+                style={{ background: `rgba(10, 10, 10, ${ratio})` }}
               />
             ))}
             多
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-[3px]">
+        {/* 热力图：每列一周（7 天），列向左增长，和 GitHub 的贡献图读法一致 */}
+        <div className="mt-4 flex gap-[2px] overflow-x-auto pb-1">
           {heatmap.length === 0 && <p className="text-[12px] text-muted">还没有数据</p>}
-          {heatmap.map((cell) => {
-            const intensity = cell.count === 0 ? 0 : 0.25 + (cell.count / maxCount) * 0.75;
-            return (
-              <span
-                key={cell.date}
-                title={`${cell.date}：${cell.count} 篇`}
-                className="h-4 w-4 rounded-[3px] border border-line"
-                style={{
-                  background: intensity === 0 ? '#f3efe9' : `rgba(194, 65, 12, ${intensity})`,
-                }}
-              />
-            );
-          })}
+          {Array.from({ length: Math.ceil(heatmap.length / 7) }, (_, week) => (
+            <div key={week} className="flex flex-col gap-[2px]">
+              {heatmap.slice(week * 7, week * 7 + 7).map((cell) => {
+                const intensity = cell.count === 0 ? 0 : 0.25 + (cell.count / maxCount) * 0.75;
+                return (
+                  <span
+                    key={cell.date}
+                    title={`${cell.date}：${cell.count} 篇`}
+                    className="h-[11px] w-[11px] border border-line"
+                    style={{
+                      background: intensity === 0 ? '#f4f4f4' : `rgba(10, 10, 10, ${intensity})`,
+                    }}
+                  />
+                );
+              })}
+            </div>
+          ))}
         </div>
       </Card>
 

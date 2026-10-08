@@ -71,7 +71,7 @@ export function AiChatPanel({ className }: { className?: string }) {
                   key={sample}
                   type="button"
                   onClick={() => ask(sample)}
-                  className="rounded-full border border-line bg-surface px-3 py-1.5 text-[12px] text-ink-soft hover:border-brand hover:text-brand"
+                  className="border border-line bg-surface px-3 py-1.5 text-[12px] text-ink-soft transition-colors hover:border-ink hover:text-ink"
                 >
                   {sample}
                 </button>
@@ -82,10 +82,10 @@ export function AiChatPanel({ className }: { className?: string }) {
 
         {turns.map((turn, index) => (
           <div key={index} className="space-y-2">
-            <div className="rounded-xl bg-brand-soft px-3 py-2 text-[13px] text-brand-dark">
+            <div className="rounded-[2px] bg-brand-soft px-3 py-2 text-[13px] text-brand-dark">
               {turn.question}
             </div>
-            <div className="rounded-xl border border-line bg-surface px-3 py-2.5">
+            <div className="rounded-[2px] border border-line bg-surface px-3 py-2.5">
               {turn.answer ? (
                 <MarkdownView content={turn.answer} className="prose-ink text-[14px]" />
               ) : turn.streaming ? (
@@ -101,7 +101,7 @@ export function AiChatPanel({ className }: { className?: string }) {
                     <Link
                       key={citation.noteId}
                       href={`/notes/${citation.noteId}`}
-                      className="rounded-full bg-olive-soft px-2 py-0.5 text-[11px] text-olive hover:bg-olive/15"
+                      className="border-b border-line text-[11px] text-muted transition-colors hover:border-ink hover:text-ink"
                     >
                       [{ci + 1}] {citation.title.slice(0, 14)}
                     </Link>
@@ -126,7 +126,7 @@ export function AiChatPanel({ className }: { className?: string }) {
             }}
             rows={2}
             placeholder="问问我你的笔记…（Enter 发送，Shift+Enter 换行）"
-            className="min-h-[46px] flex-1 resize-none rounded-xl border border-line bg-surface px-3 py-2 text-[13px] outline-none placeholder:text-muted focus:border-brand"
+            className="min-h-[46px] flex-1 resize-none rounded-[2px] border border-line bg-surface px-3 py-2 text-[13px] outline-none placeholder:text-muted focus:border-brand"
           />
           <Button onClick={() => ask(question)} disabled={busy || !question.trim()} size="sm">
             发送

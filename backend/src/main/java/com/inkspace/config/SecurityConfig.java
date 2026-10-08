@@ -48,6 +48,8 @@ public class SecurityConfig {
                                 "/uploads/**").permitAll()
                         // 公开分享页：免登录只读
                         .requestMatchers(HttpMethod.GET, "/api/v1/shares/*").permitAll()
+                        // 公开博客：列表 / 详情 / 侧栏都免登录只读
+                        .requestMatchers(HttpMethod.GET, "/api/v1/blog", "/api/v1/blog/**").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(handling -> handling
                         .authenticationEntryPoint(authEntryPoint)

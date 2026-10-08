@@ -39,6 +39,9 @@ export type NoteVO = {
   kind: string;
   status: string;
   favorite: boolean;
+  /** 是否已公开到博客（/blog 里可见）；publishedAt 为首次公开时间 */
+  isPublic: boolean;
+  publishedAt: string | null;
   sourceUrl: string;
   version: number;
   tags?: string[] | null;
@@ -94,6 +97,40 @@ export type AiConfigVO = {
   source: 'user' | 'global' | 'none';
   effectiveProvider: string;
   effectiveModel: string;
+};
+
+// 公开博客（免登录只读）
+
+export type BlogPostVO = {
+  id: number;
+  title: string;
+  excerpt: string;
+  publishedAt: string | null;
+  tags: string[];
+  author: string;
+  readTime: number;
+  featured: boolean;
+};
+
+export type BlogPostDetailVO = {
+  id: number;
+  title: string;
+  content: string;
+  tags: string[];
+  author: string;
+  publishedAt: string | null;
+  updatedAt: string | null;
+  readTime: number;
+  sourceUrl: string;
+};
+
+export type BlogSidebarVO = {
+  popular: BlogPostVO[];
+  tags: { name: string; count: number }[];
+  archive: { month: string; count: number }[];
+  totalPosts: number;
+  totalWords: number;
+  tagCount: number;
 };
 
 // 笔记状态：normal 正常 / inbox 稍后读 / archive 归档 / draft 草稿

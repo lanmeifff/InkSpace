@@ -195,8 +195,27 @@ public class NoteService {
         return NoteVO.detail(noteMapper.selectById(noteId), tagService.namesOfNote(noteId));
     }
 
-    public NoteVO setArchived(Long userId, Long noteId, boolean archived) {
+    /**
+     * 公开 / 取消公开到博客。
+     * published_at 只在首次公开时写入：取消再重新公开会保留最早的时间，
+     * 避免"下架又上架"把文章顶到列表最前面。
+     */
+    public NoteVO setPublished(Long userId, Long noteId, boolean published) {
         Note current = requireOwned(userId, noteId);
+        Note update = new Note();
+        update.setIsPublic(published);
+        if (published && current.getPublishedAt() == null) {
+            update.setPublishedAt(LocalDateTime.now());
+        }
+        noteMapper.update(update, new LambdaQueryWrapper<Note>()
+                .eq(Note::getId, noteId)
+                .eq(Note::getUserId, userId)
+                .isNull(Note::getDeletedAt));
+        statsService.evict(userId);
+        return NoteVO.detail(noteMapper.selectById(noteId), tagService.namesOfNote(noteId));
+    }
+
+    public NoteVO setArchived(Long userId, Long noteId, boolean archived) {        Note current = requireOwned(userId, noteId);
         Note update = new Note();
         // 归档只影响 normal/archive 两态：草稿不被归档动作覆盖
         if (archived) {

@@ -188,7 +188,7 @@ function NotesPageInner() {
                   if (event.key === 'Enter') void clip();
                 }}
                 placeholder="粘贴网页链接，例如 https://example.com/article"
-                className="h-10 flex-1 rounded-xl border border-line bg-surface px-3 text-[13px] outline-none focus:border-brand"
+                className="h-10 flex-1 rounded-[2px] border border-line bg-surface px-3 text-[13px] outline-none focus:border-brand"
               />
               <Button size="sm" onClick={clip}>
                 抓取正文

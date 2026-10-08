@@ -23,6 +23,10 @@ public class Note {
     private String kind;
     private String status;
     private Boolean isFavorite;
+    /** 1 = 已公开到博客。公开后免登录可读，是博客列表的唯一筛选条件 */
+    private Boolean isPublic;
+    /** 首次公开的时间，博客列表按它倒序；取消公开时保留，重新公开不覆盖 */
+    private LocalDateTime publishedAt;
     private String sourceUrl;
     private Integer version;
     private LocalDateTime deletedAt;
@@ -99,6 +103,22 @@ public class Note {
 
     public void setIsFavorite(Boolean isFavorite) {
         this.isFavorite = isFavorite;
+    }
+
+    public Boolean getIsPublic() {
+        return isPublic;
+    }
+
+    public void setIsPublic(Boolean isPublic) {
+        this.isPublic = isPublic;
+    }
+
+    public LocalDateTime getPublishedAt() {
+        return publishedAt;
+    }
+
+    public void setPublishedAt(LocalDateTime publishedAt) {
+        this.publishedAt = publishedAt;
     }
 
     public String getSourceUrl() {

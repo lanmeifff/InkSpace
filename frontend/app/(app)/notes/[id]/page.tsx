@@ -143,6 +143,21 @@ export default function NoteEditorPage() {
     toast.push(archived ? '已归档' : '已取消归档', 'success');
   };
 
+  /** 公开到博客：公开后免登录可读，并出现在 /blog 列表里 */
+  const togglePublish = async () => {
+    if (!note) return;
+    setBusy(true);
+    try {
+      const updated = await noteApi.publish(note.id, !note.isPublic);
+      setNote(updated);
+      toast.push(updated.isPublic ? '已公开到博客' : '已从博客撤下', 'success');
+    } catch (error) {
+      toast.push(error instanceof Error ? error.message : '操作失败', 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const addTag = async () => {
     const name = tagInput.trim();
     if (!note || !name || tags.includes(name)) {
@@ -276,31 +291,43 @@ export default function NoteEditorPage() {
   return (
     <div className="mx-auto flex max-w-[1180px] gap-6 px-5 py-6">
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-3">
-          <Link href="/notes" className="text-[13px] text-muted hover:text-brand">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <Link href="/notes" className="whitespace-nowrap text-[13px] text-muted hover:text-ink">
             ← 返回
           </Link>
           <span
             className={cn(
-              'text-[12px]',
-              saveState === 'conflict' || saveState === 'error' ? 'text-danger' : 'text-muted',
+              'whitespace-nowrap text-[12px]',
+              saveState === 'conflict' || saveState === 'error' ? 'text-danger font-semibold' : 'text-muted',
             )}
           >
             {saveState === 'saving' && <Spinner className="mr-1 h-3 w-3 align-middle" />}
             {stateText[saveState]}
           </span>
-          <span className="text-[12px] text-muted">· 版本 v{version} · {wordCount} 字</span>
-          <div className="ml-auto flex items-center gap-2">
-            <Button size="sm" variant="ghost" onClick={() => setPreview((value) => !value)}>
+          <span className="hidden whitespace-nowrap text-[12px] text-muted sm:inline">
+            · 版本 v{version} · {wordCount} 字
+          </span>
+          {/* 操作区：窄屏换行到第二行，按钮不压缩文字，字符不会竖排 */}
+          <div className="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto">
+            <Button size="sm" variant="ghost" className="whitespace-nowrap" onClick={() => setPreview((value) => !value)}>
               {preview ? '编辑' : '预览'}
             </Button>
-            <Button size="sm" variant="outline" onClick={toggleFavorite}>
+            <Button
+              size="sm"
+              variant={note.isPublic ? 'primary' : 'outline'}
+              className="whitespace-nowrap"
+              onClick={togglePublish}
+              disabled={busy}
+            >
+              {note.isPublic ? '● 已公开到博客' : '公开到博客'}
+            </Button>
+            <Button size="sm" variant="outline" className="whitespace-nowrap" onClick={toggleFavorite}>
               {note.favorite ? '★ 已收藏' : '☆ 收藏'}
             </Button>
-            <Button size="sm" variant="outline" onClick={toggleArchive}>
+            <Button size="sm" variant="outline" className="whitespace-nowrap" onClick={toggleArchive}>
               {note.status === 'archive' ? '取消归档' : '归档'}
             </Button>
-            <Button size="sm" variant="danger" onClick={softDelete}>
+            <Button size="sm" variant="danger" className="whitespace-nowrap" onClick={softDelete}>
               删除
             </Button>
           </div>
@@ -463,10 +490,25 @@ export default function NoteEditorPage() {
         </Card>
 
         <Card className="p-4">
-          <p className="text-[13px] font-medium text-ink">公开分享</p>
+          <p className="text-[13px] font-medium text-ink">公开到博客</p>
+          <p className="mt-2 text-[12px] leading-relaxed text-muted">
+            公开后会出现在 <span className="text-ink">/blog</span> 列表里，任何人免登录都能读。
+          </p>
+          <div className="mt-3 flex items-center gap-2">
+            <Button size="sm" variant={note.isPublic ? 'danger' : 'primary'} onClick={togglePublish} disabled={busy}>
+              {note.isPublic ? '从博客撤下' : '公开这篇'}
+            </Button>
+            {note.isPublic && note.publishedAt && (
+              <span className="text-[11px] text-muted">发布于 {note.publishedAt.slice(0, 10)}</span>
+            )}
+          </div>
+        </Card>
+
+        <Card className="p-4">
+          <p className="text-[13px] font-medium text-ink">公开分享链接</p>
           {share ? (
             <div className="mt-3 space-y-2 text-[12px]">
-              <p className="break-all rounded-lg bg-paper px-2.5 py-2 font-mono text-[11.5px] text-ink-soft">
+              <p className="break-all bg-wash px-2.5 py-2 font-mono text-[11.5px] text-ink-soft">
                 /share/{share.token.slice(0, 18)}…
               </p>
               <p className="text-muted">
@@ -486,7 +528,7 @@ export default function NoteEditorPage() {
               <select
                 value={expireHours}
                 onChange={(event) => setExpireHours(Number(event.target.value))}
-                className="h-9 w-full rounded-xl border border-line bg-surface px-2 text-[13px] outline-none focus:border-brand"
+                className="h-9 w-full border border-line bg-surface px-2 text-[13px] outline-none focus:border-ink"
               >
                 <option value={24}>24 小时后过期</option>
                 <option value={168}>7 天后过期</option>
@@ -495,7 +537,7 @@ export default function NoteEditorPage() {
               <Button size="sm" onClick={createShare} disabled={busy}>
                 生成公开链接
               </Button>
-              <p className="text-[12px] text-muted">链接免登录可读，可随时关闭。</p>
+              <p className="text-[12px] text-muted">适合发给个别人：带过期时间，可随时关闭。</p>
             </div>
           )}
         </Card>

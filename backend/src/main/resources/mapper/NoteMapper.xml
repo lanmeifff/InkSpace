@@ -16,6 +16,8 @@
                kind,
                status,
                is_favorite,
+               is_public,
+               published_at,
                source_url,
                version,
                created_at,

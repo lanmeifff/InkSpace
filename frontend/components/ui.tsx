@@ -2,31 +2,41 @@ import Link from 'next/link';
 import { cn } from '@/lib/cn';
 import { InkMark } from '@/components/BrandMark';
 
-/** 品牌标记：墨迹环（环内 InkSpace）+ 中文副名 */
-export function BrandMark({ compact = false }: { compact?: boolean }) {
+/**
+ * 品牌标记：墨迹环（环内 InkSpace）+ 中文副名。
+ * onDark 用于黑底区域（如登录页左侧），把墨色翻成白色。
+ */
+export function BrandMark({ compact = false, onDark = false }: { compact?: boolean; onDark?: boolean }) {
   return (
     <Link href="/notes" className="flex items-center gap-2" aria-label="InkSpace 墨记">
-      <InkMark compact={compact} className="h-12 w-12 shrink-0 text-ink" />
+      <InkMark compact={compact} className={cn('h-12 w-12 shrink-0', onDark ? 'text-white' : 'text-ink')} />
       {!compact && (
-        <span className="text-[15px] font-semibold tracking-wide text-ink">
-          墨记 <span className="font-normal text-muted">InkSpace</span>
+        <span className={cn('text-[15px] font-semibold tracking-wide', onDark ? 'text-white' : 'text-ink')}>
+          墨记{' '}
+          <span className={cn('font-normal', onDark ? 'text-white/60' : 'text-muted')}>InkSpace</span>
         </span>
       )}
     </Link>
   );
 }
 
+/**
+ * 卡片：杂志风格里几乎不用"框"，默认只给留白；
+ * 需要分组时才用 withBorder 加一条细线。
+ */
 export function Card({
   children,
   className,
   as: Tag = 'div',
+  withBorder = true,
 }: {
   children: React.ReactNode;
   className?: string;
   as?: 'div' | 'section' | 'article';
+  withBorder?: boolean;
 }) {
   return (
-    <Tag className={cn('rounded-card border border-line bg-surface', className)}>{children}</Tag>
+    <Tag className={cn(withBorder && 'border border-line', 'bg-surface', className)}>{children}</Tag>
   );
 }
 
@@ -49,14 +59,15 @@ export function Button({
   className?: string;
   title?: string;
 }) {
+  // 直角、无阴影；主按钮是黑底白字，次按钮是细线框
   const base =
-    'inline-flex items-center justify-center gap-1.5 rounded-full font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50';
+    'inline-flex items-center justify-center gap-1.5 rounded-[2px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40';
   const sizes = { sm: 'h-8 px-3 text-[13px]', md: 'h-10 px-4 text-sm' };
   const variants = {
-    primary: 'bg-brand text-white hover:bg-brand-dark',
-    outline: 'border border-line-strong bg-surface text-ink hover:border-brand hover:text-brand',
-    ghost: 'text-muted hover:bg-brand-soft hover:text-brand-dark',
-    danger: 'border border-danger/30 bg-surface text-danger hover:bg-danger/5',
+    primary: 'bg-ink text-white hover:bg-ink-soft',
+    outline: 'border border-line-strong bg-surface text-ink hover:border-ink',
+    ghost: 'text-muted hover:text-ink',
+    danger: 'border border-ink bg-surface text-ink hover:bg-ink hover:text-white',
   };
   return (
     <button
@@ -71,6 +82,7 @@ export function Button({
   );
 }
 
+/** 筛选标签：下划线式切换，不用胶囊填充 */
 export function Chip({
   children,
   active,
@@ -85,10 +97,10 @@ export function Chip({
       type="button"
       onClick={onClick}
       className={cn(
-        'rounded-full border px-3 py-1 text-[13px] transition-colors',
+        'border-b-2 px-0.5 pb-1 text-[13px] transition-colors',
         active
-          ? 'border-brand/40 bg-brand-soft text-brand-dark'
-          : 'border-line bg-surface text-muted hover:border-line-strong hover:text-ink',
+          ? 'border-ink font-semibold text-ink'
+          : 'border-transparent text-muted hover:border-line-strong hover:text-ink',
       )}
     >
       {children}
@@ -96,12 +108,13 @@ export function Chip({
   );
 }
 
+/** 标签：纯文本 + # 前缀，hover 才出现下划线 */
 export function TagPill({ name, onClick }: { name: string; onClick?: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="rounded-full bg-olive-soft px-2.5 py-0.5 text-[12px] text-olive hover:bg-olive/10"
+      className="text-[12px] text-muted transition-colors hover:text-ink hover:underline"
     >
       #{name}
     </button>
@@ -110,9 +123,9 @@ export function TagPill({ name, onClick }: { name: string; onClick?: () => void 
 
 export function EmptyState({ title, hint }: { title: string; hint?: string }) {
   return (
-    <div className="rounded-card border border-dashed border-line-strong bg-surface/60 px-6 py-12 text-center">
+    <div className="border border-dashed border-line-strong px-6 py-14 text-center">
       <p className="text-[15px] text-ink">{title}</p>
-      {hint && <p className="mt-1.5 text-[13px] text-muted">{hint}</p>}
+      {hint && <p className="mt-2 text-[13px] text-muted">{hint}</p>}
     </div>
   );
 }
@@ -125,5 +138,15 @@ export function Spinner({ className }: { className?: string }) {
         className,
       )}
     />
+  );
+}
+
+/** 小标题：左侧短横线 + 全大写英文字距，给侧栏各区块用 */
+export function SectionTitle({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <h2 className={cn('flex items-center gap-2 text-[13px] font-bold tracking-[0.14em] text-ink uppercase', className)}>
+      <span className="h-[2px] w-4 bg-ink" />
+      {children}
+    </h2>
   );
 }

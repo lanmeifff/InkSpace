@@ -54,6 +54,8 @@ CREATE TABLE IF NOT EXISTS `note`
     `kind`          VARCHAR(16)     NOT NULL DEFAULT 'manual' COMMENT 'manual/clip/import',
     `status`        VARCHAR(16)     NOT NULL DEFAULT 'normal' COMMENT 'draft/normal/archive/inbox',
     `is_favorite`   TINYINT         NOT NULL DEFAULT 0 COMMENT '是否收藏',
+    `is_public`     TINYINT         NOT NULL DEFAULT 0 COMMENT '1 表示已公开到博客',
+    `published_at`  DATETIME        NULL DEFAULT NULL COMMENT '首次公开到博客的时间，博客列表按它倒序',
     `source_url`    VARCHAR(512)    NOT NULL DEFAULT '' COMMENT '剪藏来源 URL',
     `version`       INT             NOT NULL DEFAULT 1 COMMENT '乐观锁版本号',
     `deleted_at`    DATETIME        NULL DEFAULT NULL COMMENT '软删除时间（回收站）',
@@ -63,6 +65,7 @@ CREATE TABLE IF NOT EXISTS `note`
     KEY `idx_note_user_updated` (`user_id`, `deleted_at`, `updated_at`),
     KEY `idx_note_user_status` (`user_id`, `status`),
     KEY `idx_note_notebook` (`notebook_id`),
+    KEY `idx_note_public` (`is_public`, `published_at`),
     FULLTEXT KEY `ft_note_title_plain` (`title`, `content_plain`) WITH PARSER ngram
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4

@@ -33,7 +33,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           <div
             key={item.id}
             className={cn(
-              'pointer-events-auto rounded-xl border px-4 py-3 text-[13px] shadow-sm',
+              'pointer-events-auto rounded-[2px] border px-4 py-3 text-[13px] ',
               item.kind === 'error'
                 ? 'border-danger/30 bg-white text-danger'
                 : item.kind === 'success'

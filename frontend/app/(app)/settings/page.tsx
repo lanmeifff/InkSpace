@@ -170,7 +170,7 @@ export default function SettingsPage() {
           )}
         </div>
 
-        <p className="mt-3 rounded-xl bg-paper px-3 py-2 text-[12px] text-muted">{sourceHint}</p>
+        <p className="mt-3 rounded-[2px] bg-paper px-3 py-2 text-[12px] text-muted">{sourceHint}</p>
 
         <div className="mt-4 space-y-3">
           <label className="block">
@@ -179,7 +179,7 @@ export default function SettingsPage() {
               value={providerName}
               onChange={(event) => setProviderName(event.target.value)}
               placeholder="如 DeepSeek / 通义千问 / OpenAI"
-              className="mt-1 h-10 w-full rounded-xl border border-line bg-surface px-3 text-[14px] outline-none focus:border-brand"
+              className="mt-1 h-10 w-full rounded-[2px] border border-line bg-surface px-3 text-[14px] outline-none focus:border-brand"
             />
           </label>
           <label className="block">
@@ -190,7 +190,7 @@ export default function SettingsPage() {
               onChange={(event) => setApiKey(event.target.value)}
               placeholder={aiConfig?.apiKeyMask || 'sk-...'}
               autoComplete="off"
-              className="mt-1 h-10 w-full rounded-xl border border-line bg-surface px-3 text-[14px] outline-none focus:border-brand"
+              className="mt-1 h-10 w-full rounded-[2px] border border-line bg-surface px-3 text-[14px] outline-none focus:border-brand"
             />
             <span className="mt-1 block text-[11px] text-muted">
               {aiConfig?.hasApiKey
@@ -204,7 +204,7 @@ export default function SettingsPage() {
               value={aiUrl}
               onChange={(event) => setAiUrl(event.target.value)}
               placeholder={DEFAULT_URL}
-              className="mt-1 h-10 w-full rounded-xl border border-line bg-surface px-3 text-[14px] outline-none focus:border-brand"
+              className="mt-1 h-10 w-full rounded-[2px] border border-line bg-surface px-3 text-[14px] outline-none focus:border-brand"
             />
           </label>
           <label className="block">
@@ -213,7 +213,7 @@ export default function SettingsPage() {
               value={aiModel}
               onChange={(event) => setAiModel(event.target.value)}
               placeholder={DEFAULT_MODEL}
-              className="mt-1 h-10 w-full rounded-xl border border-line bg-surface px-3 text-[14px] outline-none focus:border-brand"
+              className="mt-1 h-10 w-full rounded-[2px] border border-line bg-surface px-3 text-[14px] outline-none focus:border-brand"
             />
           </label>
         </div>
@@ -241,7 +241,7 @@ export default function SettingsPage() {
             <input
               value={nickname}
               onChange={(event) => setNickname(event.target.value)}
-              className="mt-1 h-10 w-full rounded-xl border border-line bg-surface px-3 text-[14px] outline-none focus:border-brand"
+              className="mt-1 h-10 w-full rounded-[2px] border border-line bg-surface px-3 text-[14px] outline-none focus:border-brand"
             />
           </label>
           <label className="block">
@@ -250,7 +250,7 @@ export default function SettingsPage() {
               value={avatarUrl}
               onChange={(event) => setAvatarUrl(event.target.value)}
               placeholder="/uploads/202609/xxxx.png"
-              className="mt-1 h-10 w-full rounded-xl border border-line bg-surface px-3 text-[14px] outline-none focus:border-brand"
+              className="mt-1 h-10 w-full rounded-[2px] border border-line bg-surface px-3 text-[14px] outline-none focus:border-brand"
             />
           </label>
         </div>
@@ -271,7 +271,7 @@ export default function SettingsPage() {
               type="password"
               value={oldPassword}
               onChange={(event) => setOldPassword(event.target.value)}
-              className="mt-1 h-10 w-full rounded-xl border border-line bg-surface px-3 text-[14px] outline-none focus:border-brand"
+              className="mt-1 h-10 w-full rounded-[2px] border border-line bg-surface px-3 text-[14px] outline-none focus:border-brand"
             />
           </label>
           <label className="block">
@@ -280,7 +280,7 @@ export default function SettingsPage() {
               type="password"
               value={newPassword}
               onChange={(event) => setNewPassword(event.target.value)}
-              className="mt-1 h-10 w-full rounded-xl border border-line bg-surface px-3 text-[14px] outline-none focus:border-brand"
+              className="mt-1 h-10 w-full rounded-[2px] border border-line bg-surface px-3 text-[14px] outline-none focus:border-brand"
             />
           </label>
         </div>

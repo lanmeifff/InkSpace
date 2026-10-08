@@ -18,6 +18,12 @@
 **分享**
 - 生成分享链接（token + 有效期）、关闭分享、公开页免登录只读、浏览量统计
 
+**博客（公开）**
+- 笔记级「公开到博客」开关；公开后可免登录访问
+- `/blog` 列表（日期 / 标题 / 摘要 / 作者 / 标签 / 阅读时长）、`/blog/{id}` 文章页
+- 标签总览与标签页、按月归档、右栏（热门 / 标签 / 归档 / 关于）
+- 公开接口只输出阅读所需字段，不暴露 user_id、notebook_id、version 等内部信息
+
 **仪表盘**
 - 数据总览（笔记数 / 字数 / 近 7 天动态）、写入热力图
 
@@ -38,7 +44,7 @@
 |---|---|---|---|
 | `user` | username、email、password_hash、nickname、avatar_url、role(USER/ADMIN)、status | UNIQUE(username)、UNIQUE(email) | 密码 BCrypt，绝不落明文 |
 | `notebook` | user_id、name、icon、sort_order、deleted_at | (user_id, deleted_at) | 软删除笔记本 |
-| `note` | user_id、notebook_id、title、content(LONGTEXT)、content_plain(TEXT)、kind(manual/clip/import)、status(draft/normal/archive/inbox)、is_favorite、source_url、version、deleted_at | (user_id, deleted_at, updated_at)、(user_id, status)、(user_id, is_favorite)、**FULLTEXT ngram(title, content_plain)** | 核心表；content_plain 存去格式文本供全文检索；version 乐观锁 |
+| `note` | user_id、notebook_id、title、content(LONGTEXT)、content_plain(TEXT)、kind(manual/clip/import)、status(draft/normal/archive/inbox)、is_favorite、**is_public、published_at**、source_url、version、deleted_at | (user_id, deleted_at, updated_at)、(user_id, status)、(user_id, is_favorite)、**(is_public, published_at)**、**FULLTEXT ngram(title, content_plain)** | 核心表；content_plain 存去格式文本供全文检索；version 乐观锁；is_public=1 即公开到博客 |
 | `tag` | user_id、name | UNIQUE(user_id, name) | 标签按用户隔离 |
 | `note_tag` | note_id、tag_id | UNIQUE(note_id, tag_id)、idx(tag_id) | 多对多，双方向可查 |
 | `share` | note_id、token、expire_at、view_count、closed | UNIQUE(token)、idx(note_id) | 分享链接，token 32B 随机 |
@@ -92,6 +98,10 @@
 | PUT /ai/config | 保存 AI 接入配置（apiKey 留空 = 沿用旧 Key） | 登录 |
 | DELETE /ai/config | 清除自己的 AI 配置，回落到服务端默认 | 登录 |
 | POST /ai/config/test | 用已保存配置发一句 ping 验证连通 | 登录 |
+| PUT /notes/{id}/publish | 公开 / 取消公开到博客 | 登录（归属校验） |
+| GET /blog | 博客文章列表（page/size/tag） | 公开 |
+| GET /blog/{id} | 博客文章详情 | 公开 |
+| GET /blog/sidebar | 热门 / 标签 / 归档 / 站点统计 | 公开 |
 | POST /uploads | 上传图片/头像（multipart） | 登录 |
 
 ## 4. Redis key 规划

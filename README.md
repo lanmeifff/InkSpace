@@ -21,6 +21,8 @@
 - **收集**：网页剪藏（jsoup 抓标题与正文）、Markdown 批量导入（异步 + 幂等）
 - **检索**：中文全文检索（标题 + 正文），相关性排序、关键词高亮、多条件组合筛选
 - **分享**：公开 token 链接，可设有效期、可随时关闭，浏览量统计，热点内容走 Redis 缓存
+- **博客**：笔记可一键「公开到博客」，免登录的 `/blog` 列表 / 文章页 / 标签 / 归档；
+  黑底巨型标题 + 左列表右侧栏的杂志排版，导航、侧栏（热门 / 标签 / 归档 / 关于）与分页一并提供
 - **AI**：长文 map-reduce 摘要（按笔记版本缓存）、自动打标签、基于个人笔记的问答（带引用）、周报；
   设置页可接入自己的 AI（服务商名称 / API Key / 接口地址 / 模型名），填了就用自己的额度，
   没填则回落到服务端配置；密钥 AES-GCM 加密落库，前端只回显掩码；每次调用都落 `ai_task` 审计表并受每日配额约束
@@ -31,11 +33,26 @@
 ```
 InkSpace/
 ├── backend/     # Spring Boot 服务端
-├── frontend/    # Next.js 前端
-├── db/          # 建表脚本
+├── frontend/    # Next.js 前端（/blog 是公开博客，其余是登录后的工作台）
+├── db/          # 建表脚本 + migrations/（已有库执行增量迁移）
 ├── nginx/       # 反向代理配置
 └── docs/        # 需求与设计文档
 ```
+
+## 公开博客
+
+登录后在笔记编辑器点「公开到博客」，文章就会出现在免登录可读的 `/blog`：
+
+| 路径 | 内容 |
+|---|---|
+| `/blog` | 文章列表（日期 / 标题 / 摘要 / 作者 / 标签 / 阅读时长）+ 右栏热门与标签 |
+| `/blog/[id]` | 文章详情，Markdown 渲染 |
+| `/blog/tags`、`/blog/tags/[tag]` | 标签总览与标签下的文章 |
+| `/blog/archive` | 按月归档 |
+| `/share/[token]` | 单篇带有效期的分享链接（与博客相互独立） |
+
+公开数据只暴露阅读需要的字段（不含 user_id、notebook_id 等内部信息），
+接口在 `SecurityConfig` 里对 `GET /api/v1/blog/**` 免登录放行。
 
 ## 本地运行
 
@@ -44,6 +61,9 @@ InkSpace/
 ```bash
 # 1. 建库建表（幂等，可重复执行）
 mysql -uroot -p --default-character-set=utf8mb4 < db/schema.sql
+
+# 1b. 已有库（建表脚本的 CREATE TABLE IF NOT EXISTS 不会补列）：执行增量迁移
+mysql -uroot -p --default-character-set=utf8mb4 < db/migrations/001_blog.sql
 
 # 2. 后端配置：复制模板后填入本地凭据（application-local.yml 已被 gitignore）
 cp backend/src/main/resources/application-local.yml.example \

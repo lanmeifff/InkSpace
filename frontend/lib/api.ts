@@ -1,5 +1,8 @@
 import type {
   AiConfigVO,
+  BlogPostDetailVO,
+  BlogPostVO,
+  BlogSidebarVO,
   DayCountVO,
   LoginResponse,
   NoteVO,
@@ -222,6 +225,8 @@ export const noteApi = {
     request<NoteVO>(`/notes/${id}/archive`, { method: 'PUT', body: { archived } }),
   setTags: (id: number, tags: string[]) =>
     request<string[]>(`/notes/${id}/tags`, { method: 'PUT', body: { tags } }),
+  publish: (id: number, published: boolean) =>
+    request<NoteVO>(`/notes/${id}/publish`, { method: 'PUT', body: { published } }),
   remove: (id: number) => request<void>(`/notes/${id}`, { method: 'DELETE' }),
   restore: (id: number) => request<void>(`/notes/${id}/restore`, { method: 'PUT' }),
   purge: (id: number) => request<void>(`/notes/trash/${id}`, { method: 'DELETE' }),
@@ -261,8 +266,18 @@ export const uploadApi = {
   },
 };
 
-export const aiApi = {
-  summarize: (noteId: number) =>
+/** 公开博客：全部免登录（auth: false），在 /blog 与分享页使用 */
+export const blogApi = {
+  list: (page = 1, size = 10, tag?: string) => {
+    const params = new URLSearchParams({ page: String(page), size: String(size) });
+    if (tag) params.set('tag', tag);
+    return request<PageResult<BlogPostVO>>(`/blog?${params}`, { auth: false });
+  },
+  detail: (id: number) => request<BlogPostDetailVO>(`/blog/${id}`, { auth: false }),
+  sidebar: () => request<BlogSidebarVO>('/blog/sidebar', { auth: false }),
+};
+
+export const aiApi = {  summarize: (noteId: number) =>
     request<string>(`/ai/summarize/${noteId}`, { method: 'POST' }),
   autoTags: (noteId: number, apply = false) =>
     request<string[]>(`/ai/tags/${noteId}?apply=${apply}`, { method: 'POST' }),

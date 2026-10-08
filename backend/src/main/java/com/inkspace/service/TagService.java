@@ -10,9 +10,13 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 标签：按用户隔离，重名复用（find-or-create）。
@@ -47,6 +51,32 @@ public class TagService {
             return List.of();
         }
         return tagMapper.selectBatchIds(tagIds).stream().map(Tag::getName).toList();
+    }
+
+    /**
+     * 批量取多篇笔记的标签名：博客列表一页十几篇，
+     * 逐篇查会变成 2N 次查询，这里固定 2 次。
+     */
+    public Map<Long, List<String>> namesOfNotes(List<Long> noteIds) {
+        if (noteIds == null || noteIds.isEmpty()) {
+            return Map.of();
+        }
+        List<NoteTag> links = noteTagMapper.selectList(new LambdaQueryWrapper<NoteTag>()
+                .in(NoteTag::getNoteId, noteIds));
+        if (links.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, String> nameById = tagMapper.selectBatchIds(
+                        links.stream().map(NoteTag::getTagId).distinct().toList())
+                .stream().collect(Collectors.toMap(Tag::getId, Tag::getName));
+        Map<Long, List<String>> result = new HashMap<>();
+        for (NoteTag link : links) {
+            String name = nameById.get(link.getTagId());
+            if (name != null) {
+                result.computeIfAbsent(link.getNoteId(), key -> new ArrayList<>()).add(name);
+            }
+        }
+        return result;
     }
 
     /** 全覆盖设置：先删旧关联，再按去重后的标签名逐个 find-or-create 并关联 */

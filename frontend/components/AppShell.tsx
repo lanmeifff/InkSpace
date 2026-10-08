@@ -105,7 +105,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <BrandMark />
       </div>
 
-      <nav className="mt-5 space-y-0.5">
+      <nav className="mt-5 space-y-px">
         {NAV.map((item) => {
           const active = pathname === item.href.split('?')[0] && !item.href.includes('?');
           return (
@@ -113,15 +113,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] transition-colors',
-                active ? 'bg-brand-soft font-medium text-brand-dark' : 'text-ink-soft hover:bg-white',
+                'flex items-center gap-3 border-l-2 px-3 py-2.5 text-[14px] transition-colors',
+                active
+                  ? 'border-ink bg-wash font-semibold text-ink'
+                  : 'border-transparent text-ink-soft hover:border-line-strong hover:bg-wash',
               )}
             >
-              <span className={active ? 'text-brand' : 'text-muted'}>{item.icon}</span>
+              <span className={active ? 'text-ink' : 'text-muted'}>{item.icon}</span>
               {item.label}
             </Link>
           );
         })}
+        <Link
+          href="/blog"
+          className="flex items-center gap-3 border-l-2 border-transparent px-3 py-2.5 text-[14px] text-ink-soft transition-colors hover:border-line-strong hover:bg-wash"
+        >
+          <span className="text-muted">
+            {icon('M4 5h16v14H4z M4 9h16 M9 9v10')}
+          </span>
+          公开博客
+        </Link>
       </nav>
 
       <div className="mt-6 flex-1 overflow-y-auto px-1">
@@ -131,7 +142,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Link
               key={notebook.id}
               href={`/notes?notebookId=${notebook.id}`}
-              className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-[13px] text-ink-soft hover:bg-white"
+              className="flex items-center gap-2 rounded-[2px] px-3 py-1.5 text-[13px] text-ink-soft hover:bg-white"
             >
               <span className="h-1.5 w-1.5 rounded-full bg-line-strong" />
               <span className="truncate">{notebook.name}</span>
@@ -148,7 +159,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               if (event.key === 'Enter') void createNotebook();
             }}
             placeholder="新建笔记本"
-            className="h-8 min-w-0 flex-1 rounded-lg border border-line bg-surface px-2 text-[12px] outline-none focus:border-brand"
+            className="h-8 min-w-0 flex-1 rounded-[2px] border border-line bg-surface px-2 text-[12px] outline-none focus:border-brand"
           />
           <Button size="sm" variant="outline" onClick={createNotebook} disabled={creating}>
             +
@@ -157,13 +168,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         {tags.length > 0 && (
           <>
-            <p className="mt-6 px-2 text-[12px] font-medium tracking-wide text-muted">标签</p>
-            <div className="mt-2 flex flex-wrap gap-1.5 px-2">
+            <p className="mt-6 px-2 text-[11px] font-semibold tracking-[0.14em] text-muted uppercase">标签</p>
+            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1.5 px-2">
               {tags.map((tag) => (
                 <Link
                   key={tag.id}
                   href={`/notes?tagId=${tag.id}`}
-                  className="rounded-full bg-olive-soft px-2 py-0.5 text-[11px] text-olive hover:bg-olive/15"
+                  className="text-[12px] text-ink-soft transition-colors hover:text-ink hover:underline"
                 >
                   #{tag.name}
                 </Link>
@@ -175,8 +186,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <div className="mt-3 border-t border-line pt-3">
         <div className="flex items-center gap-2 px-2">
-          <span className="grid h-8 w-8 place-items-center rounded-full bg-olive-soft text-[13px] text-olive">
-            {(user?.nickname || user?.username || 'U').slice(0, 1)}
+          <span className="grid h-8 w-8 place-items-center border border-ink bg-ink text-[13px] font-semibold text-white">
+            {(user?.nickname || user?.username || 'U').slice(0, 1).toUpperCase()}
           </span>
           <div className="min-w-0 flex-1">
             <p className="truncate text-[13px] text-ink">{user?.nickname || user?.username}</p>
@@ -186,7 +197,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <button
           type="button"
           onClick={logout}
-          className="mt-2 w-full rounded-lg px-3 py-2 text-left text-[13px] text-muted hover:bg-white hover:text-danger"
+          className="mt-2 w-full px-3 py-2 text-left text-[13px] text-muted transition-colors hover:text-ink hover:underline"
         >
           退出登录
         </button>
@@ -197,10 +208,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen overflow-hidden">
       <div className="hidden lg:flex">{sidebar}</div>
-
       {drawerOpen && (
         <div className="fixed inset-0 z-40 flex lg:hidden">
-          <div className="h-full bg-paper shadow-xl">{sidebar}</div>
+          <div className="h-full bg-paper ">{sidebar}</div>
           <button
             type="button"
             aria-label="关闭菜单"

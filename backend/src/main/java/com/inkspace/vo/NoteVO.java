@@ -20,6 +20,8 @@ public class NoteVO {
     private String kind;
     private String status;
     private Boolean favorite;
+    private Boolean isPublic;
+    private LocalDateTime publishedAt;
     private String sourceUrl;
     private Integer version;
     private List<String> tags;
@@ -50,6 +52,8 @@ public class NoteVO {
         vo.setKind(note.getKind());
         vo.setStatus(note.getStatus());
         vo.setFavorite(note.getIsFavorite());
+        vo.setIsPublic(note.getIsPublic());
+        vo.setPublishedAt(note.getPublishedAt());
         vo.setSourceUrl(note.getSourceUrl());
         vo.setVersion(note.getVersion());
         vo.setCreatedAt(note.getCreatedAt());
@@ -119,6 +123,22 @@ public class NoteVO {
 
     public void setFavorite(Boolean favorite) {
         this.favorite = favorite;
+    }
+
+    public Boolean getIsPublic() {
+        return isPublic;
+    }
+
+    public void setIsPublic(Boolean isPublic) {
+        this.isPublic = isPublic;
+    }
+
+    public LocalDateTime getPublishedAt() {
+        return publishedAt;
+    }
+
+    public void setPublishedAt(LocalDateTime publishedAt) {
+        this.publishedAt = publishedAt;
     }
 
     public String getSourceUrl() {

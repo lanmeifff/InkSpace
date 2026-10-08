@@ -43,32 +43,31 @@ export default function LoginPage() {
 
   return (
     <div className="grid min-h-screen lg:grid-cols-[1.05fr_1fr]">
-      {/* 左侧品牌区：暖纸底 + 大字号，突出产品气质 */}
-      <div className="relative hidden flex-col justify-between overflow-hidden border-r border-line bg-paper px-14 py-12 lg:flex">
-        <BrandMark />
+      {/* 左侧品牌区：黑底白字，与博客的巨型标题区呼应 */}
+      <div className="relative hidden flex-col justify-between overflow-hidden bg-ink px-14 py-12 lg:flex">
+        <BrandMark onDark />
         <div>
-          <h1 className="text-[42px] font-semibold leading-[1.2] tracking-tight text-ink">
+          <h1 className="headline text-[42px] text-white">
             把碎片收藏，
             <br />
             变成能复用的知识
           </h1>
-          <p className="mt-5 max-w-md text-[15px] leading-relaxed text-muted">
+          <p className="mt-5 max-w-md text-[15px] leading-relaxed text-white/70">
             剪藏网页、写 Markdown 笔记、中文全文检索，再让 AI 基于
-            <span className="text-brand">你自己的笔记</span>
+            <span className="text-white underline decoration-white/40 underline-offset-4">你自己的笔记</span>
             做摘要、问答与周报。
           </p>
-          <div className="mt-8 flex flex-wrap gap-2 text-[12px] text-muted">
+          <div className="mt-8 flex flex-wrap gap-2 text-[11px] tracking-[0.06em] text-white/70 uppercase">
             {['JWT 双 Token', 'Redis 缓存与限流', 'MySQL ngram 全文检索', 'SSE 流式问答', 'Docker 一键部署'].map(
               (item) => (
-                <span key={item} className="rounded-full border border-line bg-surface px-3 py-1">
+                <span key={item} className="border border-white/25 px-3 py-1">
                   {item}
                 </span>
               ),
             )}
           </div>
         </div>
-        <p className="text-[12px] text-muted">InkSpace · 个人知识库工作台</p>
-        <span className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-brand-soft" />
+        <p className="text-[12px] text-white/50">InkSpace 墨记 · 个人知识库工作台</p>
       </div>
 
       {/* 右侧表单区 */}
@@ -77,22 +76,24 @@ export default function LoginPage() {
           <div className="lg:hidden">
             <BrandMark />
           </div>
-          <h2 className="mt-4 text-[22px] font-semibold text-ink lg:mt-0">
+          <h2 className="mt-4 text-[24px] font-bold tracking-[-0.01em] text-ink lg:mt-0">
             {mode === 'login' ? '登录墨记' : '创建账号'}
           </h2>
           <p className="mt-1 text-[13px] text-muted">
             {mode === 'login' ? '用用户名或邮箱登录' : '注册后即可开始记录与检索'}
           </p>
 
-          <div className="mt-5 flex rounded-full border border-line bg-paper p-0.5">
+          <div className="mt-5 flex border-b border-line">
             {(['login', 'register'] as Mode[]).map((item) => (
               <button
                 key={item}
                 type="button"
                 onClick={() => setMode(item)}
                 className={cn(
-                  'flex-1 rounded-full py-2 text-[13px] transition-colors',
-                  mode === item ? 'bg-surface font-medium text-brand shadow-sm' : 'text-muted',
+                  'flex-1 border-b-2 pb-2 text-[13px] transition-colors',
+                  mode === item
+                    ? 'border-ink font-semibold text-ink'
+                    : 'border-transparent text-muted hover:text-ink',
                 )}
               >
                 {item === 'login' ? '登录' : '注册'}
@@ -158,7 +159,7 @@ function Field({
         onKeyDown={(event) => {
           if (event.key === 'Enter' && onEnter) onEnter();
         }}
-        className="mt-1 h-11 w-full rounded-xl border border-line bg-surface px-3 text-[14px] outline-none transition-colors placeholder:text-muted/70 focus:border-brand"
+        className="mt-1 h-11 w-full rounded-[2px] border border-line bg-surface px-3 text-[14px] outline-none transition-colors placeholder:text-muted/70 focus:border-brand"
       />
     </label>
   );

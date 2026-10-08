@@ -10,6 +10,7 @@ import com.inkspace.dto.FavoriteRequest;
 import com.inkspace.dto.NoteCreateRequest;
 import com.inkspace.dto.NoteQuery;
 import com.inkspace.dto.NoteUpdateRequest;
+import com.inkspace.dto.PublishRequest;
 import com.inkspace.dto.TagSetRequest;
 import com.inkspace.service.ClipService;
 import com.inkspace.service.ImportService;
@@ -79,6 +80,13 @@ public class NoteController {
     @PutMapping("/{id}/archive")
     public Result<NoteVO> archive(@PathVariable Long id, @Valid @RequestBody ArchiveRequest request) {
         return Result.ok(noteService.setArchived(CurrentUser.id(), id, request.getArchived()));
+    }
+
+    /** 公开 / 取消公开到博客（免登录可读） */
+    @PutMapping("/{id}/publish")
+    @OperationLog(action = "NOTE_PUBLISH", resourceType = "NOTE", resourceId = "#id")
+    public Result<NoteVO> publish(@PathVariable Long id, @Valid @RequestBody PublishRequest request) {
+        return Result.ok(noteService.setPublished(CurrentUser.id(), id, request.isPublished()));
     }
 
     @PutMapping("/{id}/tags")

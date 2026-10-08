@@ -21,8 +21,15 @@ public class AppProperties {
     /** 上传大小上限（字节），默认 5MB */
     private long uploadMaxBytes = 5 * 1024 * 1024;
 
-    /** 允许跨域的来源（不在白名单的 Origin 会被 Spring 以 403 拒绝） */
-    private List<String> allowedOrigins = List.of("http://localhost:3000", "http://localhost:8088");
+    /**
+     * 允许跨域的来源（不在白名单的 Origin 会被 Spring 以 403 拒绝）。
+     * 注意 localhost 与 127.0.0.1 在浏览器看来是两个不同来源，开发时两种写法都要列上，
+     * 否则预检被拒、前端只会报 "Failed to fetch"。
+     * 部署时用 ALLOWED_ORIGINS 环境变量覆盖成真实域名。
+     */
+    private List<String> allowedOrigins = List.of(
+            "http://localhost:3000", "http://127.0.0.1:3000",
+            "http://localhost:8088", "http://127.0.0.1:8088");
 
     public List<String> getAllowedOrigins() {
         return allowedOrigins;

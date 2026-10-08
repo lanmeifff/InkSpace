@@ -62,8 +62,7 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
         AiClientConfig config = resolve(userId);
         HttpResponse<String> response = send(config, buildBody(config, messages, jsonMode, false));
         if (response.statusCode() != 200) {
-            log.warn("LLM 调用失败 status={} body={}", response.statusCode(), truncate(response.body()));
-            throw new BizException(ErrorCode.AI_CALL_FAILED);
+            throw upstreamFailure(config, response.statusCode(), response.body());
         }
         try {
             JsonNode root = objectMapper.readTree(response.body());
@@ -89,7 +88,9 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
             HttpResponse<Stream<String>> response =
                     httpClient.send(request, HttpResponse.BodyHandlers.ofLines());
             if (response.statusCode() != 200) {
-                throw new BizException(ErrorCode.AI_CALL_FAILED);
+                // 流式响应的错误体也在这里，读一行就能拿到上游的说明
+                String detail = response.body().limit(3).collect(java.util.stream.Collectors.joining(" "));
+                throw upstreamFailure(config, response.statusCode(), detail);
             }
             try (Stream<String> lines = response.body()) {
                 lines.forEach(line -> parseSseLine(line, onDelta));
@@ -107,8 +108,18 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
         return configService.resolve(userId).model();
     }
 
-    private AiClientConfig resolve(Long userId) {
-        AiClientConfig config = configService.resolve(userId);
+    /**
+     * 上游返回非 200：把它的原话带给用户，而不是只丢一句"调用失败"。
+     * 模型名写错、Key 无效、余额不足这些都能从上游响应里读出来。
+     */
+    private BizException upstreamFailure(AiClientConfig config, int status, String body) {
+        String detail = UpstreamError.describe(objectMapper, status, body);
+        log.warn("LLM 调用失败 status={} url={} model={} detail={}",
+                status, config.url(), config.model(), detail);
+        return new BizException(ErrorCode.AI_UPSTREAM_ERROR, detail);
+    }
+
+    private AiClientConfig resolve(Long userId) {        AiClientConfig config = configService.resolve(userId);
         if (!config.hasKey()) {
             throw new BizException(ErrorCode.AI_NOT_CONFIGURED);
         }

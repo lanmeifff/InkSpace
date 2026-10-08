@@ -56,8 +56,10 @@ public class LlmPing {
         try {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() != 200) {
-                log.warn("AI 测试连接失败 status={} body={}", response.statusCode(), truncate(response.body()));
-                throw new BizException(ErrorCode.AI_CALL_FAILED);
+                // 测试连接是最该说清楚的地方：直接把上游原话回给用户
+                String detail = UpstreamError.describe(objectMapper, response.statusCode(), response.body());
+                log.warn("AI 测试连接失败 status={} url={} detail={}", response.statusCode(), config.url(), detail);
+                throw new BizException(ErrorCode.AI_UPSTREAM_ERROR, detail);
             }
             JsonNode root = objectMapper.readTree(response.body());
             String content = root.path("choices").path(0).path("message").path("content").asText("").trim();

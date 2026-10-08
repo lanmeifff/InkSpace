@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inkspace.common.api.Result;
 import com.inkspace.common.audit.AuditRecorder;
 import com.inkspace.common.audit.OperationLog;
+import com.inkspace.common.exception.BizException;
 import com.inkspace.common.security.CurrentUser;
 import com.inkspace.dto.AiChatRequest;
 import com.inkspace.service.AiService;
@@ -91,7 +92,10 @@ public class AiController {
             } catch (Exception e) {
                 log.warn("AI 问答失败 userId={}", userId, e);
                 try {
-                    sendJson(emitter, "error", Map.of("message", "AI 服务暂时不可用"));
+                    // 把可预期失败（比如模型名写错）的原因带给用户，其余情况给通用提示
+                    String message = e instanceof BizException biz && biz.getMessage() != null
+                            ? biz.getMessage() : "AI 服务暂时不可用";
+                    sendJson(emitter, "error", Map.of("message", message));
                 } catch (Exception ignored) {
                     // 客户端可能已经断开
                 }

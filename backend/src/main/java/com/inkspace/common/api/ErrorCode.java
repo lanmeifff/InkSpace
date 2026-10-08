@@ -32,6 +32,9 @@ public enum ErrorCode {
     // AI 相关
     AI_NOT_CONFIGURED(50001, "AI 服务未配置（缺少 API Key）", HttpStatus.SERVICE_UNAVAILABLE),
     AI_CALL_FAILED(50002, "AI 服务调用失败，请稍后重试", HttpStatus.BAD_GATEWAY),
+    // 上游明确告诉我们哪里配错了（模型名不存在、Key 无效、余额不足…），
+    // 这类错误把上游原话带回给用户，否则用户只能对着"调用失败"猜
+    AI_UPSTREAM_ERROR(50003, "AI 服务返回错误：请检查接口地址与模型名", HttpStatus.BAD_REQUEST),
     AI_QUOTA_EXCEEDED(42902, "今日 AI 调用次数已用完", HttpStatus.TOO_MANY_REQUESTS);
 
     private final int code;

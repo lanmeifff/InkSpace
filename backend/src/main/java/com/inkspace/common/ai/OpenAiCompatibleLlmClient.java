@@ -7,11 +7,11 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.inkspace.common.api.ErrorCode;
 import com.inkspace.common.exception.BizException;
 import com.inkspace.config.AiProperties;
+import com.inkspace.service.AiConfigService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.net.URI;
@@ -26,6 +26,10 @@ import java.util.stream.Stream;
 /**
  * OpenAI 兼容协议的 LLM 客户端（DeepSeek / 通义 / OpenAI 均可）。
  * 只用 JDK 自带 HttpClient，不引入额外 SDK —— 协议很简单：POST JSON + SSE 流。
+ *
+ * 每次调用按传入的 userId 解析接入参数：用户自己配了就用自己的 Key/模型，
+ * 没配则回落到 app.ai.* 的服务端默认。配置解析显式传参，不依赖 ThreadLocal ——
+ * SSE 问答跑在 aiExecutor 线程上，那里拿不到请求线程的 SecurityContext。
  */
 @Component
 @ConditionalOnProperty(prefix = "app.ai", name = "mock", havingValue = "false", matchIfMissing = true)
@@ -34,23 +38,29 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
     private static final Logger log = LoggerFactory.getLogger(OpenAiCompatibleLlmClient.class);
     private static final String DATA_PREFIX = "data:";
     private static final String DONE = "[DONE]";
+    private static final int TIMEOUT_FALLBACK_SECONDS = 60;
 
-    private final AiProperties properties;
+    private final AiConfigService configService;
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
+    private final int timeoutSeconds;
 
-    public OpenAiCompatibleLlmClient(AiProperties properties, ObjectMapper objectMapper) {
-        this.properties = properties;
+    public OpenAiCompatibleLlmClient(AiConfigService configService,
+                                     ObjectMapper objectMapper,
+                                     AiProperties properties) {
+        this.configService = configService;
         this.objectMapper = objectMapper;
+        this.timeoutSeconds = properties.getTimeoutSeconds() > 0
+                ? properties.getTimeoutSeconds() : TIMEOUT_FALLBACK_SECONDS;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
     }
 
     @Override
-    public LlmResult chat(List<LlmMessage> messages, boolean jsonMode) {
-        requireApiKey();
-        HttpResponse<String> response = send(buildBody(messages, jsonMode, false));
+    public LlmResult chat(Long userId, List<LlmMessage> messages, boolean jsonMode) {
+        AiClientConfig config = resolve(userId);
+        HttpResponse<String> response = send(config, buildBody(config, messages, jsonMode, false));
         if (response.statusCode() != 200) {
             log.warn("LLM 调用失败 status={} body={}", response.statusCode(), truncate(response.body()));
             throw new BizException(ErrorCode.AI_CALL_FAILED);
@@ -67,13 +77,13 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
     }
 
     @Override
-    public void chatStream(List<LlmMessage> messages, Consumer<String> onDelta) {
-        requireApiKey();
-        HttpRequest request = HttpRequest.newBuilder(URI.create(properties.getUrl()))
-                .timeout(Duration.ofSeconds(properties.getTimeoutSeconds()))
+    public void chatStream(Long userId, List<LlmMessage> messages, Consumer<String> onDelta) {
+        AiClientConfig config = resolve(userId);
+        HttpRequest request = HttpRequest.newBuilder(URI.create(config.url()))
+                .timeout(Duration.ofSeconds(timeoutSeconds))
                 .header("Content-Type", "application/json")
-                .header("Authorization", "Bearer " + properties.getApiKey())
-                .POST(HttpRequest.BodyPublishers.ofString(buildBody(messages, false, true).toString()))
+                .header("Authorization", "Bearer " + config.apiKey())
+                .POST(HttpRequest.BodyPublishers.ofString(buildBody(config, messages, false, true).toString()))
                 .build();
         try {
             HttpResponse<Stream<String>> response =
@@ -90,6 +100,22 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
             Thread.currentThread().interrupt();
             throw new BizException(ErrorCode.AI_CALL_FAILED);
         }
+    }
+
+    @Override
+    public String currentModel(Long userId) {
+        return configService.resolve(userId).model();
+    }
+
+    private AiClientConfig resolve(Long userId) {
+        AiClientConfig config = configService.resolve(userId);
+        if (!config.hasKey()) {
+            throw new BizException(ErrorCode.AI_NOT_CONFIGURED);
+        }
+        if (config.url() == null || config.url().isBlank()) {
+            throw new BizException(ErrorCode.AI_NOT_CONFIGURED);
+        }
+        return config;
     }
 
     private void parseSseLine(String line, Consumer<String> onDelta) {
@@ -111,11 +137,11 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
         }
     }
 
-    private HttpResponse<String> send(ObjectNode body) {
-        HttpRequest request = HttpRequest.newBuilder(URI.create(properties.getUrl()))
-                .timeout(Duration.ofSeconds(properties.getTimeoutSeconds()))
+    private HttpResponse<String> send(AiClientConfig config, ObjectNode body) {
+        HttpRequest request = HttpRequest.newBuilder(URI.create(config.url()))
+                .timeout(Duration.ofSeconds(timeoutSeconds))
                 .header("Content-Type", "application/json")
-                .header("Authorization", "Bearer " + properties.getApiKey())
+                .header("Authorization", "Bearer " + config.apiKey())
                 .POST(HttpRequest.BodyPublishers.ofString(body.toString()))
                 .build();
         try {
@@ -129,9 +155,9 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
         }
     }
 
-    private ObjectNode buildBody(List<LlmMessage> messages, boolean jsonMode, boolean stream) {
+    private ObjectNode buildBody(AiClientConfig config, List<LlmMessage> messages, boolean jsonMode, boolean stream) {
         ObjectNode body = objectMapper.createObjectNode();
-        body.put("model", properties.getModel());
+        body.put("model", config.model());
         body.put("temperature", 0.3);
         if (stream) {
             body.put("stream", true);
@@ -146,12 +172,6 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
             node.put("content", message.content());
         }
         return body;
-    }
-
-    private void requireApiKey() {
-        if (!StringUtils.hasText(properties.getApiKey())) {
-            throw new BizException(ErrorCode.AI_NOT_CONFIGURED);
-        }
     }
 
     private static String truncate(String text) {

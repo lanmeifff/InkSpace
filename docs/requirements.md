@@ -44,6 +44,7 @@
 | `share` | note_id、token、expire_at、view_count、closed | UNIQUE(token)、idx(note_id) | 分享链接，token 32B 随机 |
 | `ai_task` | user_id、task_type(summary/tag/qa/weekly)、status、source_id、model、prompt_tokens、completion_tokens、cost、latency_ms、error_code | (user_id, created_at)、(task_type, status) | AI 审计表：一切调用留痕 + 成本可视化 |
 | `audit_log` | user_id、action、resource_type、resource_id、detail(JSON)、ip | (user_id, created_at)、(action) | AOP 写入，操作审计 |
+| `user_ai_config` | user_id、provider_name、url、api_key_cipher、model | UNIQUE(user_id) | 用户自带的 AI 接入配置；Key 用 AES-GCM 加密（密钥由 jwt.secret 派生），一人一条 |
 | `refresh_token` | user_id、token_hash、device、expires_at、revoked_at | idx(user_id) | **V2 再启用**：会话审计 / 多端管理；MVP 阶段刷新会话直接存 Redis（见第 4 节），避免过度设计 |
 
 设计要点：
@@ -87,6 +88,10 @@
 | POST /ai/tags/{noteId} | AI 打标签 | 登录 |
 | POST /ai/chat | 知识问答（SSE 流式，带引用） | 登录 |
 | POST /ai/weekly | 周报生成 | 登录 |
+| GET /ai/config | 读自己的 AI 接入配置（Key 只回掩码） | 登录 |
+| PUT /ai/config | 保存 AI 接入配置（apiKey 留空 = 沿用旧 Key） | 登录 |
+| DELETE /ai/config | 清除自己的 AI 配置，回落到服务端默认 | 登录 |
+| POST /ai/config/test | 用已保存配置发一句 ping 验证连通 | 登录 |
 | POST /uploads | 上传图片/头像（multipart） | 登录 |
 
 ## 4. Redis key 规划
@@ -99,6 +104,7 @@
 | `share:{token}` | string 分享只读快照 | 跟随有效期 | 热点公开页不打 MySQL；关闭分享即删 | MVP |
 | `lock:import:{userId}` | string(setnx) | 10m | 导入幂等 / 防重复提交 | MVP |
 | `cache:tags:{userId}` | string JSON | 5m | Cache Aside，写后删 | MVP |
+| `ai:config:{userId}` | string（密文，`\u0001` 分隔） | 2m | 每次 AI 调用都要读配置，缓存一下；保存/清除时直接删 | MVP |
 | `cache:stats:{userId}` | string JSON | 5m | 仪表盘聚合，允许短时不一致 | V2 |
 | `code:email:{email}` | string 验证码 | 5m | 邮箱验证码（接邮箱后） | V2 |
 | `auth:device:{userId}` | hash 设备会话 | 14d | 多端登录 / 踢人下线 | V2 |

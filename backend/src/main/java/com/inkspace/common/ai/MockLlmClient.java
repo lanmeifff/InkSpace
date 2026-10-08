@@ -26,13 +26,13 @@ public class MockLlmClient implements LlmClient {
             + "## 下周方向\n- 补齐 MySQL 索引优化的实践记录";
 
     @Override
-    public LlmResult chat(List<LlmMessage> messages, boolean jsonMode) {
+    public LlmResult chat(Long userId, List<LlmMessage> messages, boolean jsonMode) {
         String content = mockContent(messages);
         return new LlmResult(content, 128, 64);
     }
 
     @Override
-    public void chatStream(List<LlmMessage> messages, Consumer<String> onDelta) {
+    public void chatStream(Long userId, List<LlmMessage> messages, Consumer<String> onDelta) {
         String content = mockContent(messages);
         int chunkSize = 12;
         for (int i = 0; i < content.length(); i += chunkSize) {
@@ -44,6 +44,11 @@ public class MockLlmClient implements LlmClient {
                 return;
             }
         }
+    }
+
+    @Override
+    public String currentModel(Long userId) {
+        return "mock";
     }
 
     private String mockContent(List<LlmMessage> messages) {

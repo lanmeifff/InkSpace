@@ -4,8 +4,11 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Card } from '@/components/ui';
 import { useToast } from '@/components/Toast';
-import { authApi, clearSession, getCachedUser } from '@/lib/api';
-import type { UserVO } from '@/lib/types';
+import { aiApi, authApi, clearSession, getCachedUser } from '@/lib/api';
+import type { AiConfigVO, UserVO } from '@/lib/types';
+
+const DEFAULT_URL = 'https://api.deepseek.com/v1/chat/completions';
+const DEFAULT_MODEL = 'deepseek-chat';
 
 export default function SettingsPage() {
   const toast = useToast();
@@ -16,6 +19,15 @@ export default function SettingsPage() {
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [busy, setBusy] = useState(false);
+
+  // AI 接入配置（用户自带 Key）
+  const [aiConfig, setAiConfig] = useState<AiConfigVO | null>(null);
+  const [providerName, setProviderName] = useState('');
+  const [aiUrl, setAiUrl] = useState('');
+  const [apiKey, setApiKey] = useState('');
+  const [aiModel, setAiModel] = useState('');
+  const [aiBusy, setAiBusy] = useState(false);
+  const [testing, setTesting] = useState(false);
 
   useEffect(() => {
     const cached = getCachedUser();
@@ -32,7 +44,70 @@ export default function SettingsPage() {
         setAvatarUrl(me.avatarUrl ?? '');
       })
       .catch(() => undefined);
+
+    aiApi
+      .config()
+      .then((config) => {
+        setAiConfig(config);
+        setProviderName(config.providerName);
+        setAiUrl(config.url);
+        setAiModel(config.model);
+      })
+      .catch(() => undefined);
   }, []);
+
+  const saveAiConfig = async () => {
+    if (!aiUrl.trim() || !aiModel.trim()) {
+      toast.push('接口地址与模型名都要填', 'error');
+      return;
+    }
+    setAiBusy(true);
+    try {
+      const saved = await aiApi.saveConfig({
+        providerName: providerName.trim(),
+        url: aiUrl.trim(),
+        apiKey: apiKey.trim() || undefined,
+        model: aiModel.trim(),
+      });
+      setAiConfig(saved);
+      setApiKey('');
+      toast.push('AI 配置已保存', 'success');
+    } catch (error) {
+      toast.push(error instanceof Error ? error.message : '保存失败', 'error');
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
+  const removeAiConfig = async () => {
+    setAiBusy(true);
+    try {
+      await aiApi.removeConfig();
+      const config = await aiApi.config();
+      setAiConfig(config);
+      setProviderName('');
+      setAiUrl('');
+      setApiKey('');
+      setAiModel('');
+      toast.push('已清除你自己的 AI 配置', 'success');
+    } catch (error) {
+      toast.push(error instanceof Error ? error.message : '清除失败', 'error');
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
+  const testAiConfig = async () => {
+    setTesting(true);
+    try {
+      const reply = await aiApi.testConfig();
+      toast.push(`连接成功：${reply}`, 'success');
+    } catch (error) {
+      toast.push(error instanceof Error ? error.message : '连接失败', 'error');
+    } finally {
+      setTesting(false);
+    }
+  };
 
   const saveProfile = async () => {
     setBusy(true);
@@ -66,12 +141,97 @@ export default function SettingsPage() {
     }
   };
 
+  const sourceHint =
+    aiConfig?.source === 'user'
+      ? `当前使用你自己的 Key · 模型 ${aiConfig.effectiveModel}`
+      : aiConfig?.source === 'global'
+        ? `当前使用服务端配置的 Key · 模型 ${aiConfig.effectiveModel}`
+        : '还没有可用的 Key：填好下面三项后保存即可开始用 AI';
+
   return (
     <div className="mx-auto max-w-[720px] px-5 py-6">
       <h1 className="text-[22px] font-semibold tracking-tight text-ink">设置</h1>
       <p className="mt-1 text-[13px] text-muted">
         {user ? `${user.username} · ${user.email} · 注册于 ${user.createdAt}` : '载入中…'}
       </p>
+
+      <Card className="mt-5 p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[14px] font-medium text-ink">AI 接入配置</p>
+            <p className="mt-1 text-[12px] text-muted">
+              填自己的服务商名称、API Key 和模型名，摘要 / 问答 / 周报就走你自己的额度。
+            </p>
+          </div>
+          {aiConfig?.hasApiKey && (
+            <span className="shrink-0 rounded-full bg-olive-soft px-2.5 py-0.5 text-[11px] text-olive">
+              已配置
+            </span>
+          )}
+        </div>
+
+        <p className="mt-3 rounded-xl bg-paper px-3 py-2 text-[12px] text-muted">{sourceHint}</p>
+
+        <div className="mt-4 space-y-3">
+          <label className="block">
+            <span className="text-[12px] text-muted">服务商名称</span>
+            <input
+              value={providerName}
+              onChange={(event) => setProviderName(event.target.value)}
+              placeholder="如 DeepSeek / 通义千问 / OpenAI"
+              className="mt-1 h-10 w-full rounded-xl border border-line bg-surface px-3 text-[14px] outline-none focus:border-brand"
+            />
+          </label>
+          <label className="block">
+            <span className="text-[12px] text-muted">API Key</span>
+            <input
+              type="password"
+              value={apiKey}
+              onChange={(event) => setApiKey(event.target.value)}
+              placeholder={aiConfig?.apiKeyMask || 'sk-...'}
+              autoComplete="off"
+              className="mt-1 h-10 w-full rounded-xl border border-line bg-surface px-3 text-[14px] outline-none focus:border-brand"
+            />
+            <span className="mt-1 block text-[11px] text-muted">
+              {aiConfig?.hasApiKey
+                ? `已保存（${aiConfig.apiKeyMask}）；留空则沿用这把 Key，不会覆盖`
+                : '密文落库，前端不回显明文'}
+            </span>
+          </label>
+          <label className="block">
+            <span className="text-[12px] text-muted">接口地址（OpenAI 兼容）</span>
+            <input
+              value={aiUrl}
+              onChange={(event) => setAiUrl(event.target.value)}
+              placeholder={DEFAULT_URL}
+              className="mt-1 h-10 w-full rounded-xl border border-line bg-surface px-3 text-[14px] outline-none focus:border-brand"
+            />
+          </label>
+          <label className="block">
+            <span className="text-[12px] text-muted">模型名</span>
+            <input
+              value={aiModel}
+              onChange={(event) => setAiModel(event.target.value)}
+              placeholder={DEFAULT_MODEL}
+              className="mt-1 h-10 w-full rounded-xl border border-line bg-surface px-3 text-[14px] outline-none focus:border-brand"
+            />
+          </label>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <Button size="sm" onClick={saveAiConfig} disabled={aiBusy}>
+            {aiBusy ? '保存中…' : '保存配置'}
+          </Button>
+          <Button size="sm" variant="outline" onClick={testAiConfig} disabled={testing}>
+            {testing ? '测试中…' : '测试连接'}
+          </Button>
+          {(aiConfig?.hasApiKey || aiConfig?.providerName) && (
+            <Button size="sm" variant="ghost" onClick={removeAiConfig} disabled={aiBusy}>
+              清除我的配置
+            </Button>
+          )}
+        </div>
+      </Card>
 
       <Card className="mt-5 p-5">
         <p className="text-[14px] font-medium text-ink">个人资料</p>

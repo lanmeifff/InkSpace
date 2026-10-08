@@ -1,4 +1,5 @@
 import type {
+  AiConfigVO,
   DayCountVO,
   LoginResponse,
   NoteVO,
@@ -266,4 +267,10 @@ export const aiApi = {
   autoTags: (noteId: number, apply = false) =>
     request<string[]>(`/ai/tags/${noteId}?apply=${apply}`, { method: 'POST' }),
   weekly: () => request<string>('/ai/weekly', { method: 'POST' }),
+  config: () => request<AiConfigVO>('/ai/config'),
+  /** apiKey 留空 = 沿用已保存的 Key */
+  saveConfig: (body: { providerName: string; url: string; apiKey?: string; model: string }) =>
+    request<AiConfigVO>('/ai/config', { method: 'PUT', body }),
+  removeConfig: () => request<void>('/ai/config', { method: 'DELETE' }),
+  testConfig: () => request<string>('/ai/config/test', { method: 'POST' }),
 };

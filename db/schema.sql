@@ -147,3 +147,19 @@ CREATE TABLE IF NOT EXISTS `audit_log`
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci COMMENT ='操作审计';
+
+CREATE TABLE IF NOT EXISTS `user_ai_config`
+(
+    `id`             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `user_id`        BIGINT UNSIGNED NOT NULL COMMENT '归属用户，一人一条',
+    `provider_name`  VARCHAR(32)     NOT NULL DEFAULT '' COMMENT '服务商名称，用户自取（如 DeepSeek）',
+    `url`            VARCHAR(255)    NOT NULL COMMENT 'OpenAI 兼容接口完整地址',
+    `api_key_cipher` VARCHAR(512)    NOT NULL DEFAULT '' COMMENT 'API Key：AES-GCM 加密后 base64，绝不存明文',
+    `model`          VARCHAR(64)     NOT NULL DEFAULT '' COMMENT '模型名，用户手填',
+    `created_at`     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_user_ai_config_user` (`user_id`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_0900_ai_ci COMMENT ='用户自带的 AI 接入配置';

@@ -94,7 +94,7 @@ public class AiService {
         try {
             String content = note.getContent() == null ? "" : note.getContent();
             if (content.length() <= SINGLE_CALL_LIMIT) {
-                LlmResult result = llmClient.chat(List.of(
+                LlmResult result = llmClient.chat(userId, List.of(
                         LlmMessage.system("你是严谨的笔记摘要助手。"),
                         LlmMessage.user(prompts.render("summarize-chunk",
                                 Map.of("title", note.getTitle(), "content", content)))), false);
@@ -106,7 +106,7 @@ public class AiService {
                 List<String> chunks = splitChunks(content, CHUNK_SIZE);
                 List<String> partial = new ArrayList<>();
                 for (String chunk : chunks) {
-                    LlmResult result = llmClient.chat(List.of(
+                    LlmResult result = llmClient.chat(userId, List.of(
                             LlmMessage.system("你是严谨的笔记摘要助手。"),
                             LlmMessage.user(prompts.render("summarize-chunk",
                                     Map.of("title", note.getTitle(), "content", chunk)))), false);
@@ -114,7 +114,7 @@ public class AiService {
                     promptTokens += result.promptTokens();
                     completionTokens += result.completionTokens();
                 }
-                LlmResult merged = llmClient.chat(List.of(
+                LlmResult merged = llmClient.chat(userId, List.of(
                         LlmMessage.system("你是严谨的笔记摘要助手。"),
                         LlmMessage.user(prompts.render("summarize-merge",
                                 Map.of("title", note.getTitle(), "chunks", String.join("\n---\n", partial))))), false);
@@ -123,11 +123,11 @@ public class AiService {
                 completionTokens += merged.completionTokens();
             }
             redis.opsForValue().set(cacheKey, summary, SUMMARY_TTL);
-            record(userId, "summary", "success", noteId, properties.getModel(),
+            record(userId, "summary", "success", noteId, llmClient.currentModel(userId),
                     promptTokens, completionTokens, System.currentTimeMillis() - start, "");
             return summary;
         } catch (BizException e) {
-            record(userId, "summary", "failed", noteId, properties.getModel(),
+            record(userId, "summary", "failed", noteId, llmClient.currentModel(userId),
                     0, 0, System.currentTimeMillis() - start, String.valueOf(e.getErrorCode().getCode()));
             throw e;
         }
@@ -140,13 +140,13 @@ public class AiService {
         checkQuota(userId);
         long start = System.currentTimeMillis();
         try {
-            LlmResult result = llmClient.chat(List.of(
+            LlmResult result = llmClient.chat(userId, List.of(
                     LlmMessage.system("你是笔记标签助手，只输出 JSON。"),
                     LlmMessage.user(prompts.render("auto-tags",
                             Map.of("title", note.getTitle(),
                                     "content", truncate(note.getContent(), 3000))))), true);
             List<String> tags = parseTags(result.content());
-            record(userId, "tag", "success", noteId, properties.getModel(),
+            record(userId, "tag", "success", noteId, llmClient.currentModel(userId),
                     result.promptTokens(), result.completionTokens(),
                     System.currentTimeMillis() - start, "");
             if (apply && !tags.isEmpty()) {
@@ -154,7 +154,7 @@ public class AiService {
             }
             return tags;
         } catch (BizException e) {
-            record(userId, "tag", "failed", noteId, properties.getModel(),
+            record(userId, "tag", "failed", noteId, llmClient.currentModel(userId),
                     0, 0, System.currentTimeMillis() - start, String.valueOf(e.getErrorCode().getCode()));
             throw e;
         }
@@ -186,14 +186,14 @@ public class AiService {
                 "context", context.isEmpty() ? "（没有检索到相关笔记）" : context.toString(),
                 "question", question));
         try {
-            llmClient.chatStream(List.of(
+            llmClient.chatStream(userId, List.of(
                     LlmMessage.system("你是我的知识助理，只依据给定笔记片段回答。"),
                     LlmMessage.user(userPrompt)), onDelta);
-            record(userId, "qa", "success", null, properties.getModel(),
+            record(userId, "qa", "success", null, llmClient.currentModel(userId),
                     userPrompt.length() / 2, 0,
                     System.currentTimeMillis() - start, "");
         } catch (BizException e) {
-            record(userId, "qa", "failed", null, properties.getModel(),
+            record(userId, "qa", "failed", null, llmClient.currentModel(userId),
                     0, 0, System.currentTimeMillis() - start, String.valueOf(e.getErrorCode().getCode()));
             throw e;
         }
@@ -217,16 +217,16 @@ public class AiService {
                     .append(truncate(note.getContentPlain(), 120)).append("\n");
         }
         try {
-            LlmResult result = llmClient.chat(List.of(
+            LlmResult result = llmClient.chat(userId, List.of(
                     LlmMessage.system("你是知识管理助手。"),
                     LlmMessage.user(prompts.render("weekly",
                             Map.of("notes", notesText.isEmpty() ? "（本周没有新增或修改的笔记）" : notesText.toString())))), false);
-            record(userId, "weekly", "success", null, properties.getModel(),
+            record(userId, "weekly", "success", null, llmClient.currentModel(userId),
                     result.promptTokens(), result.completionTokens(),
                     System.currentTimeMillis() - start, "");
             return result.content();
         } catch (BizException e) {
-            record(userId, "weekly", "failed", null, properties.getModel(),
+            record(userId, "weekly", "failed", null, llmClient.currentModel(userId),
                     0, 0, System.currentTimeMillis() - start, String.valueOf(e.getErrorCode().getCode()));
             throw e;
         }

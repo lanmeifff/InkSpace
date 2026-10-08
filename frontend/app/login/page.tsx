@@ -102,7 +102,7 @@ export default function LoginPage() {
 
           <div className="mt-5 space-y-3">
             {mode === 'login' ? (
-              <Field label="用户名或邮箱" value={account} onChange={setAccount} placeholder="ffff-00" />
+              <Field label="用户名或邮箱" value={account} onChange={setAccount} placeholder="用户名或邮箱" />
             ) : (
               <>
                 <Field label="用户名" value={username} onChange={setUsername} placeholder="3-20 位字母数字下划线" />

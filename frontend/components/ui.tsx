@@ -1,16 +1,15 @@
 import Link from 'next/link';
 import { cn } from '@/lib/cn';
+import { InkMark } from '@/components/BrandMark';
 
-/** 品牌标记：陶土橙圆角方块 + 字标 */
+/** 品牌标记：墨迹环（环内 InkSpace）+ 中文副名 */
 export function BrandMark({ compact = false }: { compact?: boolean }) {
   return (
-    <Link href="/notes" className="flex items-center gap-2.5">
-      <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-brand text-[15px] font-semibold text-white">
-        墨
-      </span>
+    <Link href="/notes" className="flex items-center gap-2.5" aria-label="InkSpace 墨记">
+      <InkMark compact={compact} className="h-9 w-9 shrink-0 text-ink" />
       {!compact && (
         <span className="text-[15px] font-semibold tracking-wide text-ink">
-          InkSpace <span className="font-normal text-muted">墨记</span>
+          墨记 <span className="font-normal text-muted">InkSpace</span>
         </span>
       )}
     </Link>

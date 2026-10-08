@@ -84,6 +84,18 @@ export type StatsOverviewVO = {
 
 export type DayCountVO = { date: string; count: number };
 
+/** 用户自带 AI 配置。apiKeyMask 只是掩码，后端从不回传明文；source 表示当前生效来源 */
+export type AiConfigVO = {
+  providerName: string;
+  url: string;
+  apiKeyMask: string;
+  hasApiKey: boolean;
+  model: string;
+  source: 'user' | 'global' | 'none';
+  effectiveProvider: string;
+  effectiveModel: string;
+};
+
 // 笔记状态：normal 正常 / inbox 稍后读 / archive 归档 / draft 草稿
 export const NOTE_STATUS_LABEL: Record<string, string> = {
   normal: '正常',

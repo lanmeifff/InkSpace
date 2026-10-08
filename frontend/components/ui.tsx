@@ -5,8 +5,8 @@ import { InkMark } from '@/components/BrandMark';
 /** 品牌标记：墨迹环（环内 InkSpace）+ 中文副名 */
 export function BrandMark({ compact = false }: { compact?: boolean }) {
   return (
-    <Link href="/notes" className="flex items-center gap-2.5" aria-label="InkSpace 墨记">
-      <InkMark compact={compact} className="h-9 w-9 shrink-0 text-ink" />
+    <Link href="/notes" className="flex items-center gap-2" aria-label="InkSpace 墨记">
+      <InkMark compact={compact} className="h-12 w-12 shrink-0 text-ink" />
       {!compact && (
         <span className="text-[15px] font-semibold tracking-wide text-ink">
           墨记 <span className="font-normal text-muted">InkSpace</span>

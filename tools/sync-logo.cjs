@@ -10,9 +10,13 @@ const paths = fs
   .map((line) => line.trim())
   .filter(Boolean);
 
+const TEXT_SIZE = 62;
+const TEXT_Y = 392;
+
 const component = `/**
- * 品牌标记：墨迹环（一笔回旋的锥形笔触 + 分叉）+ 环内 "InkSpace" 字标。
- * 路径由 tools/gen-logo-ring.cjs 生成后固化在这里，避免运行时计算。
+ * 品牌标记：一笔墨环（起笔于右上，绕一圈后顺势向环外拖出墨尾）+
+ * 环内 "InkSpace" 字标。路径由 tools/gen-logo-ring.cjs 生成后固化在这里，
+ * 避免运行时计算；改设计重跑 gen + sync 两个脚本，组件与 public/logo.svg 一起更新。
  */
 const RING = [
 ${paths.map((d) => `  '${d}',`).join('\n')}
@@ -32,12 +36,12 @@ export function InkMark({ compact = false, className }: { compact?: boolean; cla
       </g>
       {!compact && (
         <text
-          x="384"
-          y="396"
+          x="396"
+          y="${TEXT_Y}"
           textAnchor="middle"
-          fontSize="74"
+          fontSize="${TEXT_SIZE}"
           fontWeight="600"
-          letterSpacing="4"
+          letterSpacing="3"
           fill="currentColor"
         >
           InkSpace
@@ -52,7 +56,7 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 768 768" width
   <title id="inkspace-title">InkSpace 墨记</title>
   <g fill="#1c1917">
 ${paths.map((d) => `    <path d="${d}"/>`).join('\n')}
-    <text x="384" y="396" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="74" font-weight="600" letter-spacing="4" fill="#1c1917">InkSpace</text>
+    <text x="396" y="${TEXT_Y}" text-anchor="middle" font-family="ui-sans-serif, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="${TEXT_SIZE}" font-weight="600" letter-spacing="3" fill="#1c1917">InkSpace</text>
   </g>
 </svg>
 `;

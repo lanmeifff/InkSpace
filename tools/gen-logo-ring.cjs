@@ -1,5 +1,6 @@
-// 一次性工具：生成墨迹环形 logo 的 SVG 路径（一笔圆锥形回旋笔触 + 外伸分叉），
-// 结果已固化进 frontend/components/BrandMark.tsx，改设计时重跑本脚本。
+// 一次性工具：生成"墨迹回旋"logo 的 SVG 路径。
+// 思路：全用长而缓的锥形笔触（毛笔感），不要尖刺、不要断裂感。
+// 结果固化进 frontend/components/BrandMark.tsx，改设计时重跑本脚本。
 const fs = require('fs');
 const path = require('path');
 
@@ -18,7 +19,7 @@ const at = (angleDeg, radius) => {
   return [CX + radius * Math.cos(a), CY + radius * Math.sin(a)];
 };
 
-/** 把点列转成平滑的 SVG 路径（Catmull-Rom → 三次贝塞尔） */
+/** 点列 → 平滑三次贝塞尔（Catmull-Rom） */
 function smooth(points, move) {
   let d = `${move ? 'M' : 'L'} ${r2(points[0][0])} ${r2(points[0][1])}`;
   for (let i = 0; i < points.length - 1; i += 1) {
@@ -33,19 +34,26 @@ function smooth(points, move) {
   return d;
 }
 
+/** 起笔/收笔形态：指数越小越饱满，只在两端快速收锋 */
+const POWER = { sharp: 0.45, round: 1.3, soft: 0.75 };
+
 /**
- * 一笔环形笔触：沿圆弧走 330°，半径与线宽都随机微抖，
- * 线宽按正弦包络在两端收成尖，中间最厚 —— 出"毛笔回旋"的手感。
+ * 一笔墨：中心线沿 Ark 走，线宽按正弦包络起收，
+ * envelope 决定收笔的利落程度，width 是腰部最粗处。
+ * 用中心线 + 偏移量构造外/内两条边，再各自平滑，得到毛笔式的粗细变化。
  */
-function sweep({ from, to, radius, width, steps }) {
+function stroke({ from, to, radius, width, steps = 48, drift = 7, taper = 'sharp', belly = 0.5 }) {
   const outer = [];
   const inner = [];
+  const pow = POWER[taper];
   for (let i = 0; i <= steps; i += 1) {
     const t = i / steps;
     const angle = from + (to - from) * t;
-    const envelope = Math.pow(Math.sin(Math.PI * t), 0.55);
-    const halfWidth = Math.max(1.5, (width / 2) * envelope) * between(0.82, 1.18);
-    const r = radius + between(-7, 7);
+    let envelope = Math.pow(Math.sin(Math.PI * t), pow);
+    // belly 越大，最粗处越靠后（像收笔前的那一顿）
+    envelope *= 0.86 + belly * 0.5 * Math.sin(Math.PI * t);
+    const halfWidth = Math.max(0.8, (width / 2) * envelope);
+    const r = radius + Math.sin(t * Math.PI * 1.7) * drift;
     outer.push(at(angle, r + halfWidth));
     inner.push(at(angle, r - halfWidth));
   }
@@ -53,38 +61,168 @@ function sweep({ from, to, radius, width, steps }) {
   return `${smooth(outer, true)} L ${r2(end[0])} ${r2(end[1])} ${smooth(inner.slice().reverse(), false)} Z`;
 }
 
-/** 从环上某点向外伸出的分叉：根部粗、尖端细 */
-function branch(angleDeg, length, base) {
-  const [x, y] = at(angleDeg, 238);
-  const a = (angleDeg * Math.PI) / 180 + between(-0.3, 0.3);
-  const bend = between(-30, 30);
-  const tip = [x + Math.cos(a) * length, y + Math.sin(a) * length];
-  const mid = [
-    x + Math.cos(a) * length * 0.55 + Math.cos(a + Math.PI / 2) * bend,
-    y + Math.sin(a) * length * 0.55 + Math.sin(a + Math.PI / 2) * bend,
-  ];
-  const nx = Math.cos(a + Math.PI / 2) * base;
-  const ny = Math.sin(a + Math.PI / 2) * base;
-  return [
-    `M ${r2(x + nx)} ${r2(y + ny)}`,
-    `Q ${r2(mid[0] + nx * 0.4)} ${r2(mid[1] + ny * 0.4)} ${r2(tip[0])} ${r2(tip[1])}`,
-    `Q ${r2(mid[0] - nx * 0.5)} ${r2(mid[1] - ny * 0.5)} ${r2(x - nx * 0.9)} ${r2(y - ny * 0.9)}`,
-    'Z',
-  ].join(' ');
+/** 由一串 [角度, 半径] 控制点插值出一条自由挥洒的中心线，再给宽度 */
+function freehand({ points, width, steps = 60, taper = 'sharp', bulge = 0.55 }) {
+  const [startAngle, startRadius] = points[0];
+  const [endAngle, endRadius] = points[points.length - 1];
+  const outer = [];
+  const inner = [];
+  const pow = POWER[taper];
+  for (let i = 0; i <= steps; i += 1) {
+    const t = i / steps;
+    let angle = 0;
+    let radius = 0;
+    for (let k = 0; k < points.length - 1; k += 1) {
+      const [a0, r0] = points[k];
+      const [a1, r1] = points[k + 1];
+      const lo = k / (points.length - 1);
+      const hi = (k + 1) / (points.length - 1);
+      if (t >= lo && t <= hi) {
+        const local = (t - lo) / (hi - lo);
+        // 平滑插值，避免折角
+        const e = local * local * (3 - 2 * local);
+        angle = a0 + (a1 - a0) * e;
+        radius = r0 + (r1 - r0) * e;
+        break;
+      }
+    }
+    if (i === steps) {
+      angle = endAngle;
+      radius = endRadius;
+    }
+    const envelope = Math.pow(Math.sin(Math.PI * t), pow) * (0.8 + bulge * Math.sin(Math.PI * t));
+    const halfWidth = Math.max(0.6, (width / 2) * envelope);
+    outer.push(at(angle, radius + halfWidth));
+    inner.push(at(angle, radius - halfWidth));
+  }
+  const end = inner[inner.length - 1];
+  return `${smooth(outer, true)} L ${r2(end[0])} ${r2(end[1])} ${smooth(inner.slice().reverse(), false)} Z`;
 }
 
-const paths = [
-  sweep({ from: -58, to: 205, radius: 232, width: 42, steps: 48 }),
-  // 断开的细弧，补出墨迹的层次
-  sweep({ from: 14, to: 76, radius: 238, width: 12, steps: 10 }),
-  sweep({ from: 300, to: 330, radius: 246, width: 10, steps: 8 }),
-  // 开口处的一小段：让"缺口"像有意留白，而不是忘了画
-  sweep({ from: 336, to: 6, radius: 244, width: 16, steps: 10 }),
-];
-
-for (const angle of [100, 154, 200, 248, 300]) {
-  paths.push(branch(angle, between(52, 96), between(11, 16)));
+/**
+ * 一笔墨：中心线沿 [角度, 半径, 笔宽] 控制点平滑插值，
+ * 线宽用"平台 + 两端快速收锋"的剖面，避免拉出细长的尖角。
+ */
+function spiral({ points, steps = 96, taper = 'soft' }) {
+  const outer = [];
+  const inner = [];
+  const sample = (u) => {
+    const n = points.length - 1;
+    const scaled = u * n;
+    const i = Math.min(n - 1, Math.floor(scaled));
+    const local = scaled - i;
+    const e = local * local * (3 - 2 * local);
+    const [a0, r0, w0] = points[i];
+    const [a1, r1, w1] = points[i + 1];
+    return [a0 + (a1 - a0) * e, r0 + (r1 - r0) * e, w0 + (w1 - w0) * e];
+  };
+  for (let i = 0; i <= steps; i += 1) {
+    const t = i / steps;
+    const [angle, radius, width] = sample(t);
+    const halfWidth = Math.max(1.4, (width / 2) * profile(t, taper));
+    outer.push(at(angle, radius + halfWidth));
+    inner.push(at(angle, radius - halfWidth));
+  }
+  const end = inner[inner.length - 1];
+  return `${smooth(outer, true)} L ${r2(end[0])} ${r2(end[1])} ${smooth(inner.slice().reverse(), false)} Z`;
 }
 
-fs.writeFileSync(path.join(__dirname, 'logo-ring.txt'), paths.join('\n'));
-console.log(paths.length, 'paths written');
+/** 宽度剖面：中段保持饱满，只在头尾各约一成处收锋 */
+function profile(t, taper) {
+  const ramp = taper === 'round' ? 0.16 : 0.11;
+  const plateau = taper === 'round' ? 0.82 : 0.72;
+  const value = Math.min(1, Math.min(t, 1 - t) / ramp);
+  return Math.max(plateau, Math.pow(value, 0.6));
+}
+
+// ── 候选方案 ────────────────────────────────────────────────
+// 一笔到底：从右上起笔，绕环一圈，收笔时顺着切向往外拖出一段墨尾 ——
+// 不回头、不与起笔相交，只"甩开"，这样既不尖也不打结。
+const ensō = (weight = 1) =>
+  spiral({
+    points: [
+      [-88, 252, 10 * weight],
+      [-74, 240, 34 * weight],
+      [-48, 232, 56 * weight],
+      [0, 226, 68 * weight],
+      [40, 222, 72 * weight],
+      [80, 221, 72 * weight],
+      [120, 222, 72 * weight],
+      [160, 226, 70 * weight],
+      [190, 232, 64 * weight],
+      [210, 244, 56 * weight],
+      [230, 262, 50 * weight],
+      [256, 284, 42 * weight],
+      [288, 304, 32 * weight],
+      [324, 318, 22 * weight],
+      [358, 326, 10 * weight],
+    ],
+    steps: 150,
+  });
+
+/** 环内侧的一小段破锋：贴着主笔，取"墨分五色"的一点层次 */
+const echo = (weight = 1) =>
+  spiral({
+    points: [
+      [104, 258, 4 * weight],
+      [144, 262, 12 * weight],
+      [182, 262, 11 * weight],
+      [210, 258, 5 * weight],
+    ],
+    steps: 44,
+    taper: 'round',
+  });
+
+const variants = {
+  // 定稿：一笔到底 + 内侧破锋
+  A: [ensō(), echo()],
+  // 备选：只要一笔（没有破锋）
+  B: [ensō()],
+  // 备选：笔更细、尾更长，更飘
+  C: [ensō(0.88), echo(0.9)],
+  // 备选：笔更实，尾稍短
+  D: [ensō(1.12)],
+};
+
+// 预览网格：把四个候选并排渲染成一张图（含环内字标，方便看真实观感）
+const cell = 400;
+const cells = Object.entries(variants)
+  .map(([name, paths], index) => {
+    const x = (index % 2) * cell;
+    const y = Math.floor(index / 2) * cell;
+    const scale = cell / 860;
+    return `<g transform="translate(${x},${y}) scale(${scale})">
+      <g transform="translate(-10,-30)">
+        <g fill="#1c1917">${paths.map((d) => `<path d="${d}"/>`).join('')}</g>
+        <text x="394" y="404" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="68" font-weight="600" letter-spacing="4" fill="#1c1917">InkSpace</text>
+        <text x="394" y="820" text-anchor="middle" font-family="sans-serif" font-size="34" fill="#a8a29e">${name}</text>
+      </g>
+    </g>`;
+  })
+  .join('\n');
+
+const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${cell * 2} ${cell * 2}" width="820" height="820">${cells}</svg>`;
+fs.writeFileSync(path.join(__dirname, 'logo-variants.svg'), svg);
+
+// 最终尺寸的候选文件，方便逐个看
+for (const [name, paths] of Object.entries(variants)) {
+  fs.writeFileSync(path.join(__dirname, `logo-variant-${name}.txt`), paths.join('\n'));
+}
+// 定稿候选：写进 logo-ring.txt 供 sync-logo.cjs 同步进组件与 SVG
+fs.writeFileSync(path.join(__dirname, 'logo-ring.txt'), variants.A.join('\n'));
+
+// 小尺寸检查：36px 的侧栏图标还认不认得出，是这套笔触的主要风险点
+const marks = [220, 96, 44, 36, 24]
+  .map(
+    (size, index) =>
+      `<g transform="translate(${index * 240 + 20},20) scale(${size / 768})">
+        <g fill="#1c1917">${variants.A.map((d) => `<path d="${d}"/>`).join('')}</g>
+      </g>`,
+  )
+  .join('\n');
+fs.writeFileSync(
+  path.join(__dirname, 'logo-sizes.svg'),
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 260" width="1240" height="260"><rect width="1240" height="260" fill="#faf8f5"/>${marks}</svg>`,
+);
+
+console.log('wrote logo-variants.svg, logo-sizes.svg, logo-ring.txt and 4 variant files');

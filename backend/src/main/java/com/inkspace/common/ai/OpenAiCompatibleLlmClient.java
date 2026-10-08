@@ -44,6 +44,12 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
     private static final String DATA_PREFIX = "data:";
     private static final String DONE = "[DONE]";
     private static final int TIMEOUT_FALLBACK_SECONDS = 60;
+    /**
+     * 推理型模型（如 deepseek-flash）在 delta 里会额外给 reasoning_content（思维链）。
+     * 只认 content 的话，当模型把输出预算都花在思维链上时，客户端会长时间收不到任何分片，
+     * 表现为"界面一直空着、最后超时"。所以这个字段必须单独处理。
+     */
+    private static final String REASONING_FIELD = "reasoning_content";
 
     private final AiConfigService configService;
     private final MockLlmClient mockClient;
@@ -78,7 +84,14 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
         }
         try {
             JsonNode root = objectMapper.readTree(response.body());
-            String content = root.path("choices").path(0).path("message").path("content").asText("");
+            JsonNode message = root.path("choices").path(0).path("message");
+            String content = message.path("content").asText("");
+            if (content.isBlank() && message.hasNonNull(REASONING_FIELD)) {
+                // 推理型模型可能把输出全花在思维链上，此时 content 为空；
+                // 退而取思维链，避免摘要/标签拿到空字符串却记成"成功"
+                log.warn("上游只返回了思维链、正文为空 model={}", config.model());
+                content = message.path(REASONING_FIELD).asText("");
+            }
             int promptTokens = root.path("usage").path("prompt_tokens").asInt(0);
             int completionTokens = root.path("usage").path("completion_tokens").asInt(0);
             return new LlmResult(content, promptTokens, completionTokens);
@@ -88,10 +101,11 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
     }
 
     @Override
-    public void chatStream(Long userId, List<LlmMessage> messages, Consumer<String> onDelta) {
+    public void chatStream(Long userId, List<LlmMessage> messages, Consumer<String> onDelta,
+                           Consumer<String> onThinking) {
         AiClientConfig config = resolve(userId);
         if (config.mock()) {
-            mockClient.chatStream(userId, messages, onDelta);
+            mockClient.chatStream(userId, messages, onDelta, onThinking);
             return;
         }
         requireUsable(config);
@@ -110,7 +124,7 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
                 throw upstreamFailure(config, response.statusCode(), detail);
             }
             try (Stream<String> lines = response.body()) {
-                lines.forEach(line -> parseSseLine(line, onDelta));
+                lines.forEach(line -> parseSseLine(line, onDelta, onThinking));
             }
         } catch (IOException e) {
             throw new BizException(ErrorCode.AI_CALL_FAILED);
@@ -149,7 +163,7 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
         return configService.resolve(userId);
     }
 
-    private void parseSseLine(String line, Consumer<String> onDelta) {
+    private void parseSseLine(String line, Consumer<String> onDelta, Consumer<String> onThinking) {
         if (line == null || !line.startsWith(DATA_PREFIX)) {
             return;
         }
@@ -158,10 +172,15 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
             return;
         }
         try {
-            JsonNode delta = objectMapper.readTree(payload)
-                    .path("choices").path(0).path("delta").path("content");
-            if (delta.isTextual() && !delta.asText().isEmpty()) {
-                onDelta.accept(delta.asText());
+            JsonNode delta = objectMapper.readTree(payload).path("choices").path(0).path("delta");
+            // 正文与思维链分开回调：正文进回答，思维链只用来告知"正在思考"
+            JsonNode content = delta.path("content");
+            if (content.isTextual() && !content.asText().isEmpty()) {
+                onDelta.accept(content.asText());
+            }
+            JsonNode reasoning = delta.path(REASONING_FIELD);
+            if (reasoning.isTextual() && !reasoning.asText().isEmpty()) {
+                onThinking.accept(reasoning.asText());
             }
         } catch (IOException ignored) {
             // SSE 心跳与不完整分片直接跳过

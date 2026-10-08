@@ -36,7 +36,8 @@ public class MockLlmClient implements LlmClient {
     }
 
     @Override
-    public void chatStream(Long userId, List<LlmMessage> messages, Consumer<String> onDelta) {
+    public void chatStream(Long userId, List<LlmMessage> messages, Consumer<String> onDelta,
+                           Consumer<String> onThinking) {
         String content = mockContent(messages);
         int chunkSize = 12;
         for (int i = 0; i < content.length(); i += chunkSize) {

@@ -1,12 +1,14 @@
 package com.inkspace.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.inkspace.common.ai.LlmMessage;
 import com.inkspace.common.api.Result;
 import com.inkspace.common.audit.AuditRecorder;
 import com.inkspace.common.audit.OperationLog;
 import com.inkspace.common.exception.BizException;
 import com.inkspace.common.security.CurrentUser;
 import com.inkspace.dto.AiChatRequest;
+import com.inkspace.dto.AssistantChatRequest;
 import com.inkspace.service.AiService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -103,6 +105,48 @@ public class AiController {
             } finally {
                 auditContext.write(auditRecorder.mapper(), "AI_QA", "USER", null,
                         ok ? "" : "error=AskFailed");
+            }
+        });
+        return emitter;
+    }
+
+    /**
+     * 通用助手对话（SSE 流式）：不检索笔记，支持多轮上下文。
+     * 与 /chat 的区别只是不拼笔记片段，配额与审计口径一致。
+     */
+    @PostMapping(value = "/assistant", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter assistant(@Valid @RequestBody AssistantChatRequest request) {
+        Long userId = CurrentUser.id();
+        List<LlmMessage> messages = request.getMessages().stream()
+                // 只接受 user / assistant 两种角色，避免前端塞进 system 覆盖人设
+                .filter(message -> "user".equals(message.getRole()) || "assistant".equals(message.getRole()))
+                .map(message -> new LlmMessage(message.getRole(), message.getContent()))
+                .toList();
+        SseEmitter emitter = new SseEmitter(0L);
+        AuditRecorder.AuditContext auditContext = auditRecorder.capture();
+
+        aiExecutor.execute(() -> {
+            boolean ok = false;
+            try {
+                aiService.assistant(userId, messages,
+                        delta -> sendJson(emitter, "delta", Map.of("text", delta)),
+                        thinking -> sendJson(emitter, "thinking", Map.of("text", thinking)));
+                sendJson(emitter, "done", Map.of("ok", true));
+                ok = true;
+                emitter.complete();
+            } catch (Exception e) {
+                log.warn("AI 助手对话失败 userId={}", userId, e);
+                try {
+                    String message = e instanceof BizException biz && biz.getMessage() != null
+                            ? biz.getMessage() : "AI 服务暂时不可用";
+                    sendJson(emitter, "error", Map.of("message", message));
+                } catch (Exception ignored) {
+                    // 客户端可能已经断开
+                }
+                emitter.complete();
+            } finally {
+                auditContext.write(auditRecorder.mapper(), "AI_ASSISTANT", "USER", null,
+                        ok ? "" : "error=AssistantFailed");
             }
         });
         return emitter;

@@ -21,6 +21,7 @@ const NAV: NavItem[] = [
   { href: '/notes', label: '全部笔记', icon: icon('M4 6h16M4 12h16M4 18h10'), match: (p) => p === '/notes' || p.startsWith('/notes/') },
   { href: '/notes?status=inbox', label: '稍后读', icon: icon('M6 4h12v16l-6-4-6 4z'), match: (p) => p === '/inbox' },
   { href: '/notes?favorite=1', label: '收藏', icon: icon('M12 4l2.6 5.3 5.4.8-4 3.9 1 5.5-5-2.7-5 2.7 1-5.5-4-3.9 5.4-.8z'), match: () => false },
+  { href: '/assistant', label: 'AI 助手', icon: icon('M4 13a8 8 0 0116 0M4 13v3a2 2 0 002 2h1v-5H4m16 0v3a2 2 0 01-2 2h-1v-5h3'), match: (p) => p === '/assistant' },
   { href: '/trash', label: '回收站', icon: icon('M4 7h16M9 7V5h6v2m-8 0l1 13h8l1-13'), match: (p) => p === '/trash' },
   { href: '/dashboard', label: '数据概览', icon: icon('M4 19V9m5 10V5m5 14v-7m5 7v-4'), match: (p) => p === '/dashboard' },
   { href: '/settings', label: '设置', icon: icon('M12 15a3 3 0 100-6 3 3 0 000 6zM4 12h2m12 0h2M12 4v2m0 12v2'), match: (p) => p === '/settings' },

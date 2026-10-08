@@ -15,7 +15,20 @@ public interface LlmClient {
     LlmResult chat(Long userId, List<LlmMessage> messages, boolean jsonMode);
 
     /** 流式调用：每收到一段增量文本回调一次 onDelta */
-    void chatStream(Long userId, List<LlmMessage> messages, Consumer<String> onDelta);
+    default void chatStream(Long userId, List<LlmMessage> messages, Consumer<String> onDelta) {
+        chatStream(userId, messages, onDelta, reasoning -> {
+        });
+    }
+
+    /**
+     * 流式调用，并额外回调思维链。
+     *
+     * 推理型模型（deepseek-flash 等）在给出正文前会先输出 reasoning_content；
+     * 不接收它的话，模型把预算花在思考上时调用方会长时间收不到任何回调，
+     * 只能干等到超时。onThinking 用来把"正在思考"这一进展透出去。
+     */
+    void chatStream(Long userId, List<LlmMessage> messages, Consumer<String> onDelta,
+                    Consumer<String> onThinking);
 
     /** 该用户当前生效的模型名，用于 ai_task 审计 */
     String currentModel(Long userId);

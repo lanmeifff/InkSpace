@@ -199,6 +199,41 @@ public class AiService {
         }
     }
 
+    // 通用助手对话（流式，不检索笔记）
+
+    /** 助手人设：允许通用问答，同时知道用户在做笔记 */
+    private static final String ASSISTANT_SYSTEM_PROMPT =
+            "你是用户笔记库里的 AI 助手，直接和用户对话。"
+                    + "可以正常回答通用问题、解释概念、写代码、翻译、闲聊，不要局限于笔记内容。"
+                    + "如果你确实知道用户笔记里有相关内容，可以主动提一句。"
+                    + "不确定的事情直说不确定，不要编造。用中文回答，除非用户用其他语言提问。";
+
+    /**
+     * 自由对话：不检索笔记，直接把多轮历史交给模型。
+     * 与 ask() 的区别只有"不拼笔记上下文"，配额与审计逻辑一致。
+     *
+     * @param onThinking 推理型模型会先输出思维链；不接收的话模型全力思考时
+     *                   调用方会长时间收不到任何回调，界面只能干等
+     */
+    public void assistant(Long userId, List<LlmMessage> messages,
+                          Consumer<String> onDelta, Consumer<String> onThinking) {
+        checkQuota(userId);
+        long start = System.currentTimeMillis();
+        int promptChars = messages.stream().mapToInt(message -> message.content().length()).sum();
+        try {
+            List<LlmMessage> payload = new ArrayList<>();
+            payload.add(LlmMessage.system(ASSISTANT_SYSTEM_PROMPT));
+            payload.addAll(messages);
+            llmClient.chatStream(userId, payload, onDelta, onThinking);
+            record(userId, "assistant", "success", null, llmClient.currentModel(userId),
+                    promptChars / 2, 0, System.currentTimeMillis() - start, "");
+        } catch (BizException e) {
+            record(userId, "assistant", "failed", null, llmClient.currentModel(userId),
+                    0, 0, System.currentTimeMillis() - start, String.valueOf(e.getErrorCode().getCode()));
+            throw e;
+        }
+    }
+
     // 周报
 
     public String weekly(Long userId) {

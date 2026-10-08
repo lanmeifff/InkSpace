@@ -31,12 +31,30 @@ public class AppProperties {
             "http://localhost:3000", "http://127.0.0.1:3000",
             "http://localhost:8088", "http://127.0.0.1:8088");
 
+    /**
+     * 允许跨域的来源模式，支持端口通配，例如 http://localhost:*。
+     *
+     * 本地开发经常换端口（3000 被占就起 3100、3200），逐个写进白名单很容易漏，
+     * 而漏掉的后果只是前端报 "Failed to fetch"，排查成本高，所以本机来源一律放通。
+     * 这些模式只覆盖 localhost / 127.0.0.1 / [::1]；线上域名仍必须走 allowedOrigins 显式声明。
+     */
+    private List<String> allowedOriginPatterns = List.of(
+            "http://localhost:*", "http://127.0.0.1:*", "http://[::1]:*");
+
     public List<String> getAllowedOrigins() {
         return allowedOrigins;
     }
 
     public void setAllowedOrigins(List<String> allowedOrigins) {
         this.allowedOrigins = allowedOrigins;
+    }
+
+    public List<String> getAllowedOriginPatterns() {
+        return allowedOriginPatterns;
+    }
+
+    public void setAllowedOriginPatterns(List<String> allowedOriginPatterns) {
+        this.allowedOriginPatterns = allowedOriginPatterns;
     }
 
     public long getUploadMaxBytes() {

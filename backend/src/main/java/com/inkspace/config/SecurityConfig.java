@@ -58,11 +58,12 @@ public class SecurityConfig {
         return http.build();
     }
 
-    /** CORS 来源白名单 */
+    /** CORS 来源白名单：精确来源 + 本机通配模式（开发换端口不必改配置） */
     @Bean
     public CorsConfigurationSource corsConfigurationSource(AppProperties appProperties) {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(appProperties.getAllowedOrigins());
+        configuration.setAllowedOriginPatterns(appProperties.getAllowedOriginPatterns());
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setMaxAge(3600L);

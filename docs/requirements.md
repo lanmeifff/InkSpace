@@ -93,6 +93,7 @@
 | POST /ai/summarize/{noteId} | 单篇摘要（SSE 推分块进度） | 登录 |
 | POST /ai/tags/{noteId} | AI 打标签 | 登录 |
 | POST /ai/chat | 知识问答（SSE 流式，带引用） | 登录 |
+| POST /ai/assistant | 通用助手对话（SSE 流式，带多轮上下文，不检索笔记） | 登录 |
 | POST /ai/weekly | 周报生成 | 登录 |
 | GET /ai/config | 读自己的 AI 接入配置（Key 只回掩码） | 登录 |
 | PUT /ai/config | 保存 AI 接入配置（apiKey 留空 = 沿用旧 Key） | 登录 |
